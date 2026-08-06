@@ -83,7 +83,8 @@ check("requires initialize before use", noInit.status === 400, `got ${noInit.sta
 
 // Real client handshake.
 const client = new Client({ name: "http-smoke", version: "1.0.0" });
-await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL)));
+const clientTransport = new StreamableHTTPClientTransport(new URL(MCP_URL));
+await client.connect(clientTransport);
 
 const { tools } = await client.listTools();
 check("tools listed over HTTP", tools.length === 5, `${tools.length} tools`);
@@ -99,6 +100,8 @@ check("tool call works over HTTP", /ROUTING CODES/.test(ref.content?.[0]?.text |
 const after = await (await fetch(`${BASE}/health`)).json();
 check("session was registered", after.sessions >= 1, `${after.sessions} active`);
 
+let searchId = null;
+
 if (process.env.ITA_MATRIX_LIVE === "1") {
   console.log("\n--- live over HTTP ---");
   const d = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
@@ -111,10 +114,40 @@ if (process.env.ITA_MATRIX_LIVE === "1") {
   });
   const body = r.content?.[0]?.text || "";
   check("live search over HTTP", !r.isError && /#1/.test(body), body.split("\n")[0]);
+  searchId = body.match(/Search ID: (\S+)/)?.[1] ?? null;
   console.log(body.slice(0, 400));
 }
 
+// An explicitly terminated session must drop out of the map at once. (A plain
+// client.close() only aborts locally and tells the server nothing; those
+// sessions are reclaimed by the idle sweep instead.) The SDK's
+// Protocol.connect() installs its own transport.onclose, so the handler that
+// does the removal has to be registered after connect() or it is silently
+// overwritten — which it was, leaking every terminated session.
+await clientTransport.terminateSession();
 await client.close();
+await new Promise((r) => setTimeout(r, 300));
+const closed = await (await fetch(`${BASE}/health`)).json();
+check("terminated session is dropped", closed.sessions === 0, `${closed.sessions} still active`);
+
+// Search IDs must outlive the session that issued them: the model routinely
+// comes back for details after a reconnect or a long pause.
+if (searchId) {
+  const b = new Client({ name: "http-smoke-2", version: "1.0.0" });
+  await b.connect(new StreamableHTTPClientTransport(new URL(MCP_URL)));
+  const det = await b.callTool({
+    name: "get_itinerary_details",
+    arguments: { searchId, rank: 1 },
+  });
+  const text = det.content?.[0]?.text || "";
+  check(
+    "Search ID survives a reconnect",
+    !det.isError && /RBD/.test(text),
+    text.split("\n").slice(0, 2).join(" | ")
+  );
+  await b.close();
+}
+
 child.kill("SIGTERM");
 console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} FAILED`}`);
 process.exit(failures === 0 ? 0 : 1);

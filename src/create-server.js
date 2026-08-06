@@ -7,6 +7,7 @@
  * expressible.
  */
 
+import { randomBytes } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -27,27 +28,50 @@ const client = new MatrixClient({
 });
 
 /**
- * Build a fully-wired MCP server.
- *
- * Called once per stdio process, and once per HTTP session so that each client
- * gets its own search cache (search IDs are only meaningful within a session).
- */
-export function createServer() {
-/**
  * Searches are expensive (20–60s), and detail lookups need the session and
  * solutionSet from the originating search. Hold recent searches so
  * get_itinerary_details is a cheap follow-up instead of a full re-run.
+ *
+ * Deliberately module-scoped, NOT per-server. An HTTP MCP session is far
+ * shorter-lived than the user's train of thought: it is swept after 30 minutes
+ * idle, and any reconnect (new conversation, dropped stream, client restart)
+ * opens a fresh one. When the cache lived inside createServer(), every one of
+ * those events silently emptied it, and get_itinerary_details answered
+ * "Unknown Search ID" for an ID the model had just been handed. Scoping the
+ * cache to the process decouples it from session churn.
+ *
+ * Because IDs now outlive the session that minted them, they carry a random
+ * suffix: unguessable, so one client still cannot read another's results.
  */
 const searches = new Map();
-const MAX_CACHED = 20;
+const MAX_CACHED = 50;
+const SEARCH_TTL_MS = 6 * 60 * 60 * 1000;
 let searchSeq = 0;
 
-function remember(entry) {
-  const id = `s${++searchSeq}`;
-  searches.set(id, entry);
+function pruneSearches() {
+  const cutoff = Date.now() - SEARCH_TTL_MS;
+  for (const [id, e] of searches) {
+    if (e.createdAt < cutoff) searches.delete(id);
+  }
+  // Map iterates in insertion order, so this drops the oldest first.
   while (searches.size > MAX_CACHED) searches.delete(searches.keys().next().value);
+}
+
+function remember(entry) {
+  const id = `s${++searchSeq}-${randomBytes(3).toString("hex")}`;
+  searches.set(id, { ...entry, createdAt: Date.now() });
+  pruneSearches();
   return id;
 }
+
+/** Flight numbers flown, in order — stable across re-runs of the same search. */
+const signature = (sol) => sol.slices.map((s) => s.flights.join(">")).join("|");
+
+/**
+ * Build a fully-wired MCP server. Called once per stdio process, and once per
+ * HTTP session.
+ */
+export function createServer() {
 
 const text = (t) => ({ content: [{ type: "text", text: t }] });
 const fail = (t) => ({ content: [{ type: "text", text: t }], isError: true });
@@ -214,6 +238,7 @@ server.registerTool(
       );
       const pax = paxFrom(a);
 
+      const pageSize = Math.max(limit * 3, 30);
       const raw = await client.search({
         slices,
         pax,
@@ -221,7 +246,7 @@ server.registerTool(
         maxStops: a.maxStops,
         currency: a.currency,
         salesCity: a.salesCity,
-        pageSize: Math.max(limit * 3, 30),
+        pageSize,
       });
 
       const all = (raw.solutionList?.solutions || []).map(normalizeSolution);
@@ -243,6 +268,7 @@ server.registerTool(
         maxStops: a.maxStops,
         currency: a.currency,
         salesCity: a.salesCity,
+        pageSize,
         ranked: picked,
       });
 
@@ -266,9 +292,13 @@ server.registerTool(
     description:
       "Show per-segment detail for one itinerary from a previous search: " +
       "operating flight numbers, booking class (RBD), fare basis codes, and " +
-      "aircraft type. Reuses the earlier search session, so it is fast.",
+      "aircraft type. Reuses the earlier search session, so it is normally " +
+      "fast; if that session has expired upstream it silently re-runs the " +
+      "original search, which takes as long as the search did.",
     inputSchema: {
-      searchId: z.string().describe('Search ID from search_flights, e.g. "s1".'),
+      searchId: z
+        .string()
+        .describe('Search ID exactly as returned by search_flights, e.g. "s1-a7f2c9".'),
       rank: z
         .number()
         .int()
@@ -278,11 +308,14 @@ server.registerTool(
   },
   async ({ searchId, rank }) => {
     try {
+      pruneSearches();
       const entry = searches.get(searchId);
       if (!entry) {
         return fail(
-          `Unknown Search ID "${searchId}". Recent searches: ` +
-            `${[...searches.keys()].join(", ") || "none"}. Run search_flights again.`
+          `Unknown Search ID "${searchId}" — it has expired or was never issued ` +
+            `(results are kept for 6 hours). Known IDs: ` +
+            `${[...searches.keys()].join(", ") || "none"}. ` +
+            `Re-run search_flights and use the ID it returns.`
         );
       }
       const target = entry.ranked[rank - 1];
@@ -290,17 +323,60 @@ server.registerTool(
         return fail(`Rank ${rank} out of range — that search returned ${entry.ranked.length}.`);
       }
 
-      const raw = await client.detail({
-        solutionSet: entry.solutionSet,
-        session: entry.session,
-        solutionId: target.id,
+      const detailArgs = {
         slices: entry.slices,
         pax: entry.pax,
         cabin: entry.cabin,
         maxStops: entry.maxStops,
         currency: entry.currency,
         salesCity: entry.salesCity,
-      });
+      };
+
+      let raw;
+      try {
+        raw = await client.detail({
+          ...detailArgs,
+          solutionSet: entry.solutionSet,
+          session: entry.session,
+          solutionId: target.id,
+        });
+      } catch (e) {
+        if (!(e instanceof MatrixError)) throw e;
+        // Matrix's solutionSet/session are held server-side and expire on their
+        // own schedule, so a cached entry can outlive the engine state it
+        // points at. Re-run the original search and re-locate this itinerary by
+        // the flight numbers it flies, then retry.
+        let fresh = null;
+        try {
+          fresh = await client.search({ ...detailArgs, pageSize: entry.pageSize });
+        } catch {
+          /* report the original failure below, not this one */
+        }
+
+        const want = signature(target);
+        const match = (fresh?.solutionList?.solutions || [])
+          .map(normalizeSolution)
+          .find((s) => signature(s) === want);
+
+        if (!match) {
+          return fail(
+            `That itinerary is no longer available from Matrix (its pricing ` +
+              `session expired, and re-running the search did not turn it up — ` +
+              `fares and schedules move). Run search_flights again for current ` +
+              `options. Original error: ${e.message}`
+          );
+        }
+
+        entry.solutionSet = fresh.solutionSet;
+        entry.session = fresh.session;
+        target.id = match.id;
+        raw = await client.detail({
+          ...detailArgs,
+          solutionSet: fresh.solutionSet,
+          session: fresh.session,
+          solutionId: match.id,
+        });
+      }
 
       const header =
         `#${rank}  ${target.priceDisplay}  ·  ${hm(target.totalDurationMinutes)} total\n\n`;

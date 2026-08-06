@@ -90,8 +90,16 @@ terminates TLS.
 
 `GET /health` returns status and active session count, for Coolify's health check.
 
-Each HTTP session gets its own server instance and its own search cache, so
-Search IDs never leak between clients. Idle sessions are swept after 30 minutes.
+Each HTTP session gets its own server instance. Idle sessions are swept after 30
+minutes, and closed sessions are dropped immediately.
+
+The search cache is process-wide rather than per-session, because MCP sessions
+are much shorter-lived than a user's train of thought — a reconnect or a
+30-minute pause would otherwise throw away results the model was still holding a
+Search ID for. IDs carry a random suffix (`s3-a7f2c9`) so they stay unguessable
+between clients, and entries expire after 6 hours. If Matrix's own pricing
+session expires first, `get_itinerary_details` re-runs the original search and
+re-locates the itinerary by flight number rather than failing.
 
 ## How it works
 

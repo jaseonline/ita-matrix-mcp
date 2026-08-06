@@ -143,6 +143,7 @@ const httpServer = http.createServer(async (req, res) => {
       return rpcError(res, -32000, "Missing Mcp-Session-Id; send initialize first.", 400);
     }
 
+    const server = createServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
@@ -150,15 +151,21 @@ const httpServer = http.createServer(async (req, res) => {
         log("session opened", id, `(${sessions.size} active)`);
       },
     });
+
+    await server.connect(transport);
+
+    // Must be assigned AFTER connect(): the SDK's Protocol.connect() installs
+    // its own transport.onclose, so anything set beforehand is overwritten.
+    // It was, which is why closed sessions used to linger in the map until the
+    // idle sweep collected them.
+    const protocolOnClose = transport.onclose;
     transport.onclose = () => {
-      if (transport.sessionId) {
-        sessions.delete(transport.sessionId);
-        log("session closed", transport.sessionId);
+      protocolOnClose?.();
+      if (transport.sessionId && sessions.delete(transport.sessionId)) {
+        log("session closed", transport.sessionId, `(${sessions.size} active)`);
       }
     };
 
-    const server = createServer();
-    await server.connect(transport);
     await transport.handleRequest(req, res, body);
   } catch (err) {
     log("request failed:", err?.stack || err?.message || String(err));
