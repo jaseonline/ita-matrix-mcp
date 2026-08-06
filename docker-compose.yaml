@@ -1,0 +1,31 @@
+# For Coolify's "Docker Compose" resource type, or plain `docker compose up`.
+#
+# Coolify's proxy terminates TLS and routes the public domain to port 3000, so
+# no ports are published to the host here.
+services:
+  ita-matrix-mcp:
+    build: .
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      # Optional. Leave empty to serve at /mcp (open to anyone with the
+      # hostname). Set it to move the endpoint to /mcp/<secret>, which then
+      # acts as the credential.
+      - ITA_MATRIX_SECRET_PATH=${ITA_MATRIX_SECRET_PATH:-}
+      # Your public domain, so a rebound Host header is refused.
+      - ITA_MATRIX_ALLOWED_HOSTS=${ITA_MATRIX_ALLOWED_HOSTS:-}
+      # Optional: pin the upstream key instead of auto-discovering it.
+      - ITA_MATRIX_API_KEY=${ITA_MATRIX_API_KEY:-}
+      # Matrix multi-city searches are slow; leave headroom.
+      - ITA_MATRIX_TIMEOUT_MS=${ITA_MATRIX_TIMEOUT_MS:-150000}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

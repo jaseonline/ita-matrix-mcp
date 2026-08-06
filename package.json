@@ -1,0 +1,24 @@
+{
+  "name": "ita-matrix-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for ITA Matrix airfare search, with multi-city and routing-language support",
+  "type": "module",
+  "main": "src/server.js",
+  "bin": {
+    "ita-matrix-mcp": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/",
+    "test:live": "ITA_MATRIX_LIVE=1 node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}
