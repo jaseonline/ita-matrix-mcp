@@ -43,9 +43,14 @@ Legs need not connect — `JFK→LHR` then `CDG→JFK` is a valid open jaw.
 ### Routing codes
 
 Per-leg, and the reason this beats normal search. `AA+` = only American,
-`~ORD` = never via Chicago, `AA+ DFW AA+` = American connecting at Dallas,
-`F F` = exactly two flights. Extension codes go in `extraCodes`:
-`maxconnect 240`, `alliance star-alliance`, `-overnight`, `f bc=J|C`.
+`AA+ DFW AA+` = American connecting at Dallas, `F F` = exactly two flights,
+`~ORD` = exactly one connection, not at Chicago. Extension codes go in
+`extraCodes`, separated by semicolons: `maxconnect 240`,
+`alliance star-alliance; -overnight`, `f bc=J|C`.
+
+A bare carrier or airport fixes the flight count: `AA` means exactly one
+American flight and `DFW` means exactly one connection, in Dallas. Add `+`,
+`*`, `?` or `F?` padding (`AA+`, `F? DFW F?`, `F* AA F*`) to allow more.
 
 Call `routing_language_reference` for the full syntax.
 

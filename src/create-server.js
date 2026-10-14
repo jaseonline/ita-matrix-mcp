@@ -97,9 +97,11 @@ const sliceSchema = z.object({
     .optional()
     .describe(
       "ITA routing-language code for THIS leg — the main tool for complex " +
-        'routes. Examples: "UA+" (only United), "(AA|BA)+" (either), ' +
+        'routes. Examples: "UA+" (only United), "AA,BA+" (either), ' +
         '"AA+ LHR AA+" (American, connecting at Heathrow), "DL DL DL" ' +
-        '(exactly 3 Delta flights), "X:LAX" (avoid LAX). ' +
+        '(exactly 3 Delta flights), "~LAX" (one connection, not LAX). ' +
+        'A bare carrier or airport fixes the flight count ("AA" is exactly one ' +
+        'AA flight); add + or F? to allow more. ' +
         "Call routing_language_reference for the full syntax."
     ),
   extraCodes: z
@@ -107,7 +109,8 @@ const sliceSchema = z.object({
     .optional()
     .describe(
       'Matrix extension/command codes for this leg, e.g. "f bc=J|C" to force ' +
-        'business fare buckets, "f bc=Y" for full-fare economy.'
+        'business fare buckets, "f bc=Y" for full-fare economy. Separate several ' +
+        'codes with semicolons, e.g. "alliance oneworld; -overnight".'
     ),
   departAfter: z.string().optional().describe('Earliest departure, "HH:MM".'),
   departBefore: z.string().optional().describe('Latest departure, "HH:MM".'),
