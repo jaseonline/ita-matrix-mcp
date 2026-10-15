@@ -22,6 +22,7 @@ import {
   hm,
 } from "./format.js";
 import { ROUTING_REFERENCE } from "./routing-reference.js";
+import { flatten, buildLinks, agentBrief } from "./handoff.js";
 
 const client = new MatrixClient({
   timeoutMs: Number(process.env.ITA_MATRIX_TIMEOUT_MS) || 150000,
@@ -307,9 +308,23 @@ server.registerTool(
         .int()
         .min(1)
         .describe("Which itinerary — the #N shown in the search results."),
+      links: z
+        .boolean()
+        .optional()
+        .describe(
+          "Append an agent brief (one GDS-style line per flight) and booking " +
+            "links: British Airways, Qantas and Emirates where on the ticket, " +
+            "plus a route map and Where to Credit. Default true."
+        ),
+      baEdition: z.string().optional().describe('BA site edition, ISO country. Default "GB".'),
+      qfEdition: z
+        .enum(["EN_AU", "EN_NZ", "EN_US"])
+        .optional()
+        .describe('Qantas site edition. Default "EN_US".'),
+      qfCurrency: z.enum(["AUD", "NZD", "USD"]).optional().describe('Qantas currency. Default "USD".'),
     },
   },
-  async ({ searchId, rank }) => {
+  async ({ searchId, rank, links = true, baEdition, qfEdition, qfCurrency }) => {
     try {
       pruneSearches();
       const entry = searches.get(searchId);
@@ -383,7 +398,23 @@ server.registerTool(
 
       const header =
         `#${rank}  ${target.priceDisplay}  ·  ${hm(target.totalDurationMinutes)} total\n\n`;
-      return text(header + renderDetail(raw.bookingDetails, { itinerary: null }));
+      let body = renderDetail(raw.bookingDetails, { itinerary: null });
+      if (links) {
+        try {
+          const flat = flatten(raw.bookingDetails);
+          const brief = agentBrief(flat);
+          const urls = buildLinks(flat, entry.pax, { baEdition, qfEdition, qfCurrency });
+          if (brief.length) {
+            body += "\nAgent brief (carrier flight class date route dep arr fare):\n" + brief.join("\n") + "\n";
+          }
+          if (urls.length) {
+            body += "\nLinks:\n" + urls.map((u) => `- ${u.name}: ${u.url}`).join("\n") + "\n";
+          }
+        } catch {
+          /* hand-over is a convenience; never fail the detail call over it */
+        }
+      }
+      return text(header + body);
     } catch (e) {
       return handle(e);
     }

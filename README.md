@@ -17,7 +17,7 @@ here — take the flight numbers to the airline or an OTA to ticket them.
 | Tool | What it does |
 |---|---|
 | `search_flights` | The workhorse. 1–6 legs: one-way, round-trip, multi-city, open-jaw. Per-leg routing codes. |
-| `get_itinerary_details` | Expands one result into per-segment booking class (RBD), fare basis, and aircraft type. |
+| `get_itinerary_details` | Expands one result into per-segment booking class (RBD), fare basis, and aircraft type, then appends an agent brief (one GDS-style line per flight) and booking links. Pass `links: false` to omit them. |
 | `search_flexible_dates` | Scans a date range for the cheapest departure date. |
 | `lookup_airport` | Resolves place names to IATA codes, including metro codes. |
 | `routing_language_reference` | The routing-code cheat sheet, so Claude can compose non-trivial codes. |
@@ -130,6 +130,17 @@ trips, so sorting is always done client-side. Premium economy is `PREMIUM-COACH`
 on the wire while every other cabin uses the plain enum form. Matrix
 intermittently returns "service is currently unavailable"; that is retried with
 backoff.
+
+## Hand-over links
+
+`get_itinerary_details` ends with deep links built from the priced itinerary, ported from
+[ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools):
+
+- **British Airways** and **Qantas** pin the exact flights, dates and booking classes (BA also the cabin). Shown when BA/IB/EI or QF/JQ/NZ is on the ticket. Editions and the Qantas currency can be set per call (`baEdition`, `qfEdition`, `qfCurrency`).
+- **Emirates** pre-fills a search only (origin, dates, cabin); it does not pin the flights or the fare. One-way and plain round trips only.
+- **Great Circle Mapper** route map and **Where to Credit** earning calculator.
+
+The links are generated offline from Matrix's booking data and have not been exercised against the live airline sites. The BA link uses 24-hour departure times; upstream writes a 12-hour time, so check it if BA rejects the link.
 
 ## Testing
 

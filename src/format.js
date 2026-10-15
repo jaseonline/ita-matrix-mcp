@@ -1,3 +1,5 @@
+import { fareMap } from "./handoff.js";
+
 /**
  * Turn Matrix's verbose JSON into compact text.
  *
@@ -137,6 +139,9 @@ export function renderDetail(booking, fallback) {
   if (!slices.length) return "No booking detail returned for that itinerary.";
 
   const out = [];
+  // Fare basis is filed under tickets[].pricings[].fares[], keyed by the
+  // segments each fare covers, not on the segment's own bookingInfos.
+  const fareByKey = fareMap(booking);
   slices.forEach((sl, i) => {
     // bookingDetails often omits slice-level duration, so derive it from the
     // segments (which includes layovers only if the engine supplied them).
@@ -153,7 +158,14 @@ export function renderDetail(booking, fallback) {
       const infos = seg.bookingInfos || [];
       const rbd = [...new Set(infos.map((b) => b.bookingCode).filter(Boolean))];
       const cabins = [...new Set(infos.map((b) => b.cabin).filter(Boolean))];
-      const fares = [...new Set(infos.map((b) => b.fareBasisCode).filter(Boolean))];
+      const fares = [
+        ...new Set(
+          [
+            ...infos.map((b) => b.fareBasisCode),
+            ...rbd.map((c) => fareByKey.get(`${seg.origin?.code}${seg.destination?.code}${c}`)?.code),
+          ].filter(Boolean)
+        ),
+      ];
       const aircraft = (seg.legs || [])
         .map((l) => l.aircraft?.shortName)
         .filter(Boolean);
