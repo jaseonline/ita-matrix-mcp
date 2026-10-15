@@ -2,8 +2,8 @@
  * The link builders below are translations of code from ita-matrix-powertools
  * (https://github.com/adamhwang/ita-matrix-powertools), written by paul21,
  * Steppo and Adam Hwang, and licensed GPL-2.0-only. This file is therefore a
- * derivative work and is subject to that licence, which differs from the MIT
- * licence declared in package.json for the rest of the project.
+ * derivative work and is licensed GPL-2.0-only, as is this project (see
+ * LICENSE).
  */
 
 /**

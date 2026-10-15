@@ -141,8 +141,6 @@ backoff.
 - **Emirates** pre-fills a search only (origin, dates, cabin); it does not pin the flights or the fare. One-way and plain round trips only.
 - **Great Circle Mapper** route map and **Where to Credit** earning calculator.
 
-Licence note: `src/handoff.js` is derived from GPL-2.0-only code (see its header), unlike the rest of the project.
-
 The links are generated offline from Matrix's booking data and have not been exercised against the live airline sites. The BA link uses 24-hour departure times; upstream writes a 12-hour time, so check it if BA rejects the link.
 
 ## Testing
@@ -165,3 +163,11 @@ Live tests hit the real service and take 20–60s per search.
   this approach needs token handling added.
 - Prior art: [`itamx`](https://github.com/yogevkr/itamx), a Python CLI/MCP for
   the same API, which is where the protocol details were confirmed.
+
+## Licence
+
+GPL-2.0-only; see [LICENSE](LICENSE). The booking-link builders in `src/handoff.js`
+are derived from [ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools)
+(GPL-2.0-only, by paul21, Steppo and Adam Hwang). The server itself began as
+[Filip-Kin/ita-matrix-mcp](https://github.com/Filip-Kin/ita-matrix-mcp), which declares the
+MIT licence; that code is MIT-licensed material incorporated into this GPL-2.0 work.
