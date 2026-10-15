@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { flatten, buildLinks, agentBrief, fareMap } from "../src/handoff.js";
+import { flatten, buildLinks, agentBrief, fareMap, displayPrice } from "../src/handoff.js";
 import { renderDetail } from "../src/format.js";
 
 const seg = (carrier, number, o, d, dep, arr, cabin, code) => ({
@@ -124,4 +124,28 @@ test("Emirates link is a search link and is skipped for open-jaw", () => {
 test("incomplete bookingDetails yields no links rather than throwing", () => {
   assert.deepEqual(buildLinks(flatten({}), { adults: 1 }), []);
   assert.deepEqual(buildLinks(flatten({ itinerary: { slices: [{ segments: [{}] }] } }), { adults: 1 }), []);
+});
+
+test("American link carries flights, class and times; absent unless AA is flown", () => {
+  assert.ok(!buildLinks(flatten(booking), { adults: 1 }).some((l) => l.name === "American"));
+  const aa = JSON.parse(JSON.stringify(booking));
+  aa.itinerary.slices[0].segments[0].carrier.code = "AA";
+  const url = buildLinks(flatten(aa), { adults: 2 }).find((l) => l.name === "American").url;
+  assert.ok(url.startsWith("http://i11l-services.aa.com/xaa/mseGateway/entryPoint.php?PARAM="));
+  const param = decodeURIComponent(url.split("PARAM=")[1]);
+  assert.ok(param.startsWith("1,,USD0.00,2,2,"), param);
+  assert.ok(param.includes(",A,2027-06-11T14:20+00:00,DXB,AA8162,DUB"), param);
+  assert.ok(param.includes("DIRECT,EN,3,2,0,0,0,IE,2,2027-06-11,SYD,,DUB,"), param);
+});
+
+test("Iberia link pins class, fare basis and slices", () => {
+  const ib = JSON.parse(JSON.stringify(booking));
+  ib.itinerary.slices[0].segments[0].carrier.code = "IB";
+  const price = displayPrice({ displayTotal: "GBP9737.00" });
+  assert.deepEqual(price, { currency: "GBP", value: 9737 });
+  const url = buildLinks(flatten(ib), { adults: 1 }, { price }).find((l) => l.name === "Iberia").url;
+  assert.ok(url.startsWith("http://www.iberia.com/web/partnerLink.do?PointOfSaleCountry=GB&UserCurrency=GBP&DisplayedPrice=9737"));
+  assert.ok(url.includes("TripType=RoundTrip&Adult=1&Child=0&InfantLap=0"));
+  assert.ok(url.includes("&Cabin1=First&Carrier1=IB&Origin1=DUB&Destination1=DXB&BookingCode1=A&FlightNumber1=8162&DepartureDate1=2027-06-11&FareBasis1=AFXTEST"));
+  assert.ok(url.endsWith("&Slice1=1,2&Slice2=3,4") || url.includes("&Slice1=1,2&") && url.endsWith("&Slice2=3,4"));
 });

@@ -1,3 +1,11 @@
+/*
+ * The link builders below are translations of code from ita-matrix-powertools
+ * (https://github.com/adamhwang/ita-matrix-powertools), written by paul21,
+ * Steppo and Adam Hwang, and licensed GPL-2.0-only. This file is therefore a
+ * derivative work and is subject to that licence, which differs from the MIT
+ * licence declared in package.json for the rest of the project.
+ */
+
 /**
  * Hand-over helpers for a priced itinerary: fare basis per segment, airline
  * deep links, a Great Circle Mapper link and a Where to Credit link.
@@ -78,6 +86,12 @@ export function flatten(booking) {
       segs,
     };
   });
+}
+
+/** "GBP9737.00" -> { currency: "GBP", value: 9737 } from bookingDetails.displayTotal. */
+export function displayPrice(booking) {
+  const m = String(booking?.displayTotal || "").match(/^([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/);
+  return m ? { currency: m[1], value: Number.parseFloat(m[2].replace(/,/g, "")) } : null;
 }
 
 /** Passenger counts for link builders. `pax` is the shape the search used. */
@@ -169,6 +183,68 @@ export function ekLink(slices, pax, { edition = "/global/english" } = {}) {
   return url;
 }
 
+/**
+ * American Airlines partner link for the Europe/Asia/Pacific site (aa.com
+ * i11l gateway). Pins flights, booking classes and times. Edition is
+ * "<language>_<country>", for example "en_IE". Upstream sends every time with a
+ * +00:00 offset because Matrix gives local times only; kept as is.
+ */
+export function aaLink(slices, pax, { edition = "en_IE" } = {}) {
+  const [lang, country] = edition.split("_");
+  if (!lang || !country) return null;
+  const n = paxCounts(pax);
+  const stamp = (p) => `${p.y}-${p.mo}-${p.d}T${p.hh}:${p.mm}+00:00`;
+  let search = `1,,USD0.00,${slices.length},`;
+  const legs = [];
+  for (const sl of slices) {
+    const segs = sl.segs.map(
+      (s) => `${stamp(s.arr)},${s.rbd},${stamp(s.dep)},${s.dest},${s.carrier}${s.fnr},${s.orig}`
+    );
+    search += `${segs.length},${segs.join(",")},`;
+    legs.push(`${sl.dep.y}-${sl.dep.mo}-${sl.dep.d},${sl.dest},,${sl.orig},`);
+  }
+  search += `DIRECT,${lang.toUpperCase()},3,${n.adults},${n.children},${n.infants},0,${country.toUpperCase()},`;
+  search += `${slices.length},${legs.join(",")}`;
+  return `http://i11l-services.aa.com/xaa/mseGateway/entryPoint.php?PARAM=${encodeURIComponent(search)}`;
+}
+
+/**
+ * Iberia partner link (the Travix "googleflights" query format). Pins every
+ * flight with its booking class, fare basis and date. Edition is
+ * "<language>-<country>", for example "en-GB".
+ */
+export function ibLink(slices, pax, { edition = "en-GB", price } = {}) {
+  const [lang, pos] = edition.split("-");
+  if (!lang || !pos) return null;
+  const cabins = ["Economy", "Economy", "Business", "First"];
+  const n = paxCounts(pax);
+  const cur = price?.currency || "USD";
+  const trip =
+    slices.length === 1
+      ? "OneWay"
+      : slices.length === 2 && slices[0].orig === slices[1].dest && slices[0].dest === slices[1].orig
+        ? "RoundTrip"
+        : "MultiCity";
+  let q =
+    `PointOfSaleCountry=${pos}&UserCurrency=${cur}&DisplayedPrice=${price?.value ?? ""}` +
+    `&DisplayedPriceCurrency=${cur}&UserLanguage=${lang}&TripType=${trip}` +
+    `&Adult=${n.adults}&Child=${n.children}&InfantLap=${n.infants}`;
+  let j = 0;
+  slices.forEach((sl, i) => {
+    const idx = [];
+    for (const s of sl.segs) {
+      j++;
+      idx.push(j);
+      q +=
+        `&Cabin${j}=${cabins[s.cabin]}&Carrier${j}=${s.carrier}&Origin${j}=${s.orig}` +
+        `&Destination${j}=${s.dest}&BookingCode${j}=${s.rbd}&FlightNumber${j}=${s.fnr}` +
+        `&DepartureDate${j}=${s.dep.y}-${s.dep.mo}-${s.dep.d}&FareBasis${j}=${s.fare ?? ""}`;
+    }
+    q += `&Slice${i + 1}=${idx.join(",")}`;
+  });
+  return `http://www.iberia.com/web/partnerLink.do?${q}`;
+}
+
 /** Great Circle Mapper route map, keeping continuous paths joined. */
 export function gcmLink(slices) {
   let p = "";
@@ -206,6 +282,14 @@ export function buildLinks(slices, pax, opts = {}) {
   }
   if (anyOf(slices, "QF", "JQ", "NZ")) {
     links.push(["Qantas", qfLink(slices, pax, { edition: opts.qfEdition, currency: opts.qfCurrency })]);
+  }
+  if (anyOf(slices, "AA")) {
+    const aa = aaLink(slices, pax, { edition: opts.aaEdition });
+    if (aa) links.push(["American", aa]);
+  }
+  if (anyOf(slices, "IB", "BA")) {
+    const ib = ibLink(slices, pax, { edition: opts.ibEdition, price: opts.price });
+    if (ib) links.push(["Iberia", ib]);
   }
   if (anyOf(slices, "EK")) {
     const ek = ekLink(slices, pax, { edition: opts.ekEdition });

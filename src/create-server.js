@@ -22,7 +22,7 @@ import {
   hm,
 } from "./format.js";
 import { ROUTING_REFERENCE } from "./routing-reference.js";
-import { flatten, buildLinks, agentBrief } from "./handoff.js";
+import { flatten, buildLinks, agentBrief, displayPrice } from "./handoff.js";
 
 const client = new MatrixClient({
   timeoutMs: Number(process.env.ITA_MATRIX_TIMEOUT_MS) || 150000,
@@ -313,7 +313,7 @@ server.registerTool(
         .optional()
         .describe(
           "Append an agent brief (one GDS-style line per flight) and booking " +
-            "links: British Airways, Qantas and Emirates where on the ticket, " +
+            "links: British Airways, Iberia, American, Qantas and Emirates where on the ticket, " +
             "plus a route map and Where to Credit. Default true."
         ),
       baEdition: z.string().optional().describe('BA site edition, ISO country. Default "GB".'),
@@ -322,9 +322,17 @@ server.registerTool(
         .optional()
         .describe('Qantas site edition. Default "EN_US".'),
       qfCurrency: z.enum(["AUD", "NZD", "USD"]).optional().describe('Qantas currency. Default "USD".'),
+      aaEdition: z
+        .string()
+        .optional()
+        .describe('American site edition as "<language>_<country>", e.g. "en_IE". Default "en_IE".'),
+      ibEdition: z
+        .string()
+        .optional()
+        .describe('Iberia site edition as "<language>-<country>", e.g. "en-GB". Default "en-GB".'),
     },
   },
-  async ({ searchId, rank, links = true, baEdition, qfEdition, qfCurrency }) => {
+  async ({ searchId, rank, links = true, baEdition, qfEdition, qfCurrency, aaEdition, ibEdition }) => {
     try {
       pruneSearches();
       const entry = searches.get(searchId);
@@ -403,7 +411,14 @@ server.registerTool(
         try {
           const flat = flatten(raw.bookingDetails);
           const brief = agentBrief(flat);
-          const urls = buildLinks(flat, entry.pax, { baEdition, qfEdition, qfCurrency });
+          const urls = buildLinks(flat, entry.pax, {
+            baEdition,
+            qfEdition,
+            qfCurrency,
+            aaEdition,
+            ibEdition,
+            price: displayPrice(raw.bookingDetails),
+          });
           if (brief.length) {
             body += "\nAgent brief (carrier flight class date route dep arr fare):\n" + brief.join("\n") + "\n";
           }

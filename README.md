@@ -136,9 +136,12 @@ backoff.
 `get_itinerary_details` ends with deep links built from the priced itinerary, ported from
 [ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools):
 
-- **British Airways** and **Qantas** pin the exact flights, dates and booking classes (BA also the cabin). Shown when BA/IB/EI or QF/JQ/NZ is on the ticket. Editions and the Qantas currency can be set per call (`baEdition`, `qfEdition`, `qfCurrency`).
+- **British Airways**, **Iberia**, **American** and **Qantas** pin the exact flights, dates and booking classes (BA also the cabin; Iberia also the fare basis). Shown when that airline is on the ticket (BA, IB or EI; IB or BA for Iberia; AA; QF, JQ or NZ). Editions can be set per call: `baEdition`, `ibEdition` (e.g. `en-GB`), `aaEdition` (e.g. `en_IE`), `qfEdition` and `qfCurrency`.
+- American uses its Europe/Asia/Pacific gateway. aa.com's US and UK gateway (which needs a 270 KB airport time-zone table) is not ported.
 - **Emirates** pre-fills a search only (origin, dates, cabin); it does not pin the flights or the fare. One-way and plain round trips only.
 - **Great Circle Mapper** route map and **Where to Credit** earning calculator.
+
+Licence note: `src/handoff.js` is derived from GPL-2.0-only code (see its header), unlike the rest of the project.
 
 The links are generated offline from Matrix's booking data and have not been exercised against the live airline sites. The BA link uses 24-hour departure times; upstream writes a 12-hour time, so check it if BA rejects the link.
 
