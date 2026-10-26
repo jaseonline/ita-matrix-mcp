@@ -82,9 +82,6 @@ certificate. localhost and VPN-only hosts will not work. Remote servers are
 added under **Settings → Connectors → Add custom connector**; they cannot be
 configured through `claude_desktop_config.json`.
 
-Deployed behind Coolify, the container speaks plain HTTP and Coolify's proxy
-terminates TLS.
-
 | Env var | Default | Purpose |
 |---|---|---|
 | `PORT` | `3000` | Listen port. |
