@@ -1,0 +1,35 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ita-matrix-mcp",
+	"main": "src/index.js",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"workers_dev": true,
+	// Public static files (the MCP server icon, served at /icon.png).
+	"assets": {
+		"directory": "./public"
+	},
+	// Caches the discovered API key (30 days) and recent searches (6 hours).
+	// No id on purpose: `wrangler deploy` creates the namespace for you.
+	"kv_namespaces": [
+		{
+			"binding": "ITA_KV",
+			"id": "45ee4b4dc3b741a1aab754f6aa143e06"
+		}
+	],
+	"vars": {
+		// Upstream timeout per Matrix call. Multi-city searches are slow.
+		"ITA_MATRIX_TIMEOUT_MS": "150000"
+		// Optional, comma-separated, only needed behind a custom domain:
+		// "ITA_MATRIX_ALLOWED_HOSTS": "mcp.example.com"
+	},
+	"observability": {
+		"enabled": true
+	}
+	// Secret (never put in this file):
+	//   npx wrangler secret put ITA_MATRIX_SECRET_PATH
+	// Optional secret to pin the upstream key instead of discovering it:
+	//   npx wrangler secret put ITA_MATRIX_API_KEY
+}
