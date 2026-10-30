@@ -1,0 +1,15 @@
+# .github/workflows/mcp-grade.yml
+name: mcp-grade
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lipon101/mcp-grade@v1.0.0
+        id: scan
+        with:
+          fail-under: C
+      - name: Show grade
+        if: always()
+        run: echo "Grade ${{ steps.scan.outputs.grade }} (${{ steps.scan.outputs.score }}/100)"

@@ -1,0 +1,43 @@
+---
+# Lints the files changed by each push or pull request.
+# Python style is ruff's job (config in pyproject.toml), so super-linter only checks the workflows themselves;
+# its black/flake8/isort defaults contradict ruff's 120-column format. Full `ruff check` is not enforced yet.
+name: Lint Code Base
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  run-lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full git history is needed to get a proper list of changed files within `super-linter`
+          fetch-depth: 0
+
+      - name: Lint workflows
+        uses: super-linter/super-linter/slim@v9.0.0
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: "master"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_GITHUB_ACTIONS: true
+          # Declares runner labels newer than the bundled actionlint knows (ubuntu-26.04)
+          GITHUB_ACTIONS_CONFIG_FILE: actionlint.yml
+
+  ruff-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned to the version used locally so CI and the format-on-edit hook agree
+      - name: ruff format --check
+        run: pipx run ruff==0.17.3 format --check .
