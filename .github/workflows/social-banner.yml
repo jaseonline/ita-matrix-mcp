@@ -1,0 +1,77 @@
+---
+# Renders the banner at the top of README.md into a 1280x640 PNG, ready to use as the repository social preview.
+#
+# README.md is the single source of truth: the Socialify URL in its first <img> tag defines the design. Socialify
+# returns SVG, which GitHub's social preview does not accept, so the SVG is rasterised with headless Chromium.
+#
+# GitHub has no API for setting the social preview, so the PNG is published as a workflow artifact. Upload it once
+# under Settings -> General -> Social preview. The image bakes in star/fork/issue/PR counts, hence the monthly refresh.
+name: Social Banner
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - README.md
+      - cloudflare/src/assets/**
+      - .github/workflows/social-banner.yml
+  schedule:
+    - cron: "0 3 1 * *" # First of the month
+  workflow_dispatch: # Manual trigger option
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch banner SVG
+        run: |
+          set -euo pipefail
+          url="$(grep -o -m1 'https://socialify\.[a-z.]*/[^" ]*' README.md | head -n1 || true)"
+          if [ -z "$url" ]; then
+            echo "::error::No Socialify URL found in README.md"
+            exit 1
+          fi
+          # The README uses theme=Auto, which depends on the viewer. Pin a theme so the output is deterministic.
+          url="$(printf '%s' "$url" | sed -E 's/&theme=[^&]*//')&theme=Dark"
+          curl -fsSL --retry 3 --retry-delay 5 --max-time 60 -o banner.svg "$url"
+          head -c 200 banner.svg | grep -q '<svg' || { echo "::error::Response was not an SVG"; exit 1; }
+
+      - name: Render PNG
+        run: |
+          set -euo pipefail
+          npx --yes playwright@1 install --with-deps chromium
+          npx --yes playwright@1 screenshot --viewport-size=1280,640 "file://${PWD}/banner.svg" social-preview.png
+
+      - name: Validate PNG
+        run: |
+          set -euo pipefail
+          info="$(file social-preview.png)"
+          echo "$info"
+          case "$info" in
+            *"PNG image data, 1280 x 640"*) ;;
+            *) echo "::error::Expected a 1280x640 PNG"; exit 1 ;;
+          esac
+          size="$(stat -c %s social-preview.png)"
+          # GitHub rejects social preview images of 1 MB or more.
+          if [ "$size" -ge 1000000 ]; then
+            echo "::error::social-preview.png is ${size} bytes; GitHub's limit is 1 MB"
+            exit 1
+          fi
+          {
+            echo "### Social preview rendered"
+            echo ""
+            echo "${size} bytes, 1280x640. Download the \`social-preview\` artifact and upload it under"
+            echo "**Settings -> General -> Social preview**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: social-preview
+          path: social-preview.png
+          if-no-files-found: error
+          retention-days: 90

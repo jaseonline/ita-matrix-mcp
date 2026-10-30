@@ -1,0 +1,56 @@
+{
+  "name": "ita-matrix",
+  "title": "ITA Matrix",
+  "version": "1.0.0",
+  "description": "MCP server for ITA Matrix airfare search, with multi-city and routing-language support",
+  "license": "GPL-2.0-only",
+  "repository": "https://github.com/jaseonline/ita-matrix-mcp",
+  "runtime": { "node": ">=20" },
+  "transports": {
+    "stdio": {
+      "command": "node",
+      "args": ["src/server.js"]
+    },
+    "streamable-http": {
+      "entrypoint": "src/http-server.js",
+      "path": "/mcp",
+      "secretPath": "/mcp/<ITA_MATRIX_SECRET_PATH>",
+      "health": "/health"
+    }
+  },
+  "environment": [
+    { "name": "PORT", "default": "3000", "description": "HTTP listen port." },
+    { "name": "ITA_MATRIX_SECRET_PATH", "description": "Mounts MCP at /mcp/<secret>; the URL then acts as the credential." },
+    { "name": "ITA_MATRIX_ALLOWED_HOSTS", "description": "Comma-separated Host allowlist, guarding against DNS rebinding." },
+    { "name": "ITA_MATRIX_API_KEY", "description": "Pin the upstream API key instead of discovering it." },
+    { "name": "ITA_MATRIX_CACHE_DIR", "default": "~/.cache/ita-matrix-mcp", "description": "Directory for the 30-day cache of the discovered API key." },
+    { "name": "ITA_MATRIX_TIMEOUT_MS", "default": "150000", "description": "Upstream timeout in milliseconds." }
+  ],
+  "tools": [
+    {
+      "name": "search_flights",
+      "title": "Search flights (multi-city capable)",
+      "description": "Search ITA Matrix for itineraries. 1-6 legs: one-way, round-trip, multi-city or open-jaw, each with its own routing code."
+    },
+    {
+      "name": "get_itinerary_details",
+      "title": "Expand one itinerary",
+      "description": "Per-segment booking class, fare basis and aircraft for one itinerary from a previous search, plus an agent brief and booking links."
+    },
+    {
+      "name": "search_flexible_dates",
+      "title": "Find the cheapest dates",
+      "description": "Scan a range of departure dates and report the cheapest fare on each."
+    },
+    {
+      "name": "lookup_airport",
+      "title": "Look up airport / city codes",
+      "description": "Resolve a partial city or airport name to IATA codes, including metro codes."
+    },
+    {
+      "name": "routing_language_reference",
+      "title": "ITA routing language reference",
+      "description": "Full syntax for the routing and extraCodes fields."
+    }
+  ]
+}

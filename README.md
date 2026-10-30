@@ -12,6 +12,19 @@ alliance, or flight count.
 Results are real, priced, availability-checked fares. They are not bookable
 here — take the flight numbers to the airline or an OTA to ticket them.
 
+## Quickstart
+
+```bash
+git clone https://github.com/jaseonline/ita-matrix-mcp.git
+cd ita-matrix-mcp
+npm install
+node examples/stdio-client.mjs                      # offline check: lists the tools
+node examples/stdio-client.mjs JFK LHR 2026-12-01   # live one-way search (20-60s)
+```
+
+Then connect it to Claude as described under [Running it](#running-it). Sample `search_flights`
+arguments are in [`examples/`](examples/).
+
 ## Tools
 
 | Tool | What it does |
@@ -88,7 +101,11 @@ configured through `claude_desktop_config.json`.
 | `ITA_MATRIX_SECRET_PATH` | *(unset)* | Mounts MCP at `/mcp/<secret>` instead of `/mcp`. The URL then acts as the credential. |
 | `ITA_MATRIX_ALLOWED_HOSTS` | *(unset)* | Comma-separated Host allowlist, guarding against DNS rebinding. |
 | `ITA_MATRIX_API_KEY` | auto | Pin the upstream key instead of discovering it. |
+| `ITA_MATRIX_CACHE_DIR` | `~/.cache/ita-matrix-mcp` | Where the discovered API key is cached for 30 days. |
 | `ITA_MATRIX_TIMEOUT_MS` | `150000` | Upstream timeout. Multi-city searches are slow. |
+
+A documented template is in [`.env.example`](.env.example); Node 20.6+ can load it with
+`node --env-file=.env src/http-server.js`.
 
 `GET /health` returns status and active session count, for Coolify's health check.
 
@@ -160,6 +177,12 @@ Live tests hit the real service and take 20–60s per search.
   this approach needs token handling added.
 - Prior art: [`itamx`](https://github.com/yogevkr/itamx), a Python CLI/MCP for
   the same API, which is where the protocol details were confirmed.
+
+## Contributing and changelog
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks pull requests go through, and
+[CHANGELOG.md](CHANGELOG.md) for release notes. `mcp.json` is a machine-readable summary of the transports,
+environment variables and tools.
 
 ## Licence
 

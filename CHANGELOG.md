@@ -1,0 +1,35 @@
+# Changelog
+
+All notable changes to this project are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
+[semantic versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+
+- `mcp.json` manifest describing the transports, environment variables and tools, with a test that keeps it in step
+  with the tools the server actually registers.
+- `.env.example` documenting every environment variable.
+- `examples/`: a runnable stdio client and sample `search_flights` arguments.
+- `CONTRIBUTING.md` and this changelog.
+- `social-banner` workflow that renders the README banner to a 1280x640 PNG for use as the repository social preview.
+
+### Changed
+
+- `SECURITY.md` replaced the GitHub template with a real policy: supported versions, private reporting, scope and
+  deployment hardening.
+
+## [1.0.0]
+
+### Added
+
+- Five tools: `search_flights`, `get_itinerary_details`, `search_flexible_dates`, `lookup_airport` and
+  `routing_language_reference`.
+- Multi-city and open-jaw searches (1-6 legs) with per-leg ITA routing codes and extension codes.
+- stdio and Streamable HTTP entrypoints, with optional secret path and Host allowlist for the HTTP server.
+- Process-wide search cache (6-hour TTL) so `get_itinerary_details` survives session churn, with automatic re-run when
+  Matrix's own pricing session expires.
+- Booking hand-over links for British Airways, Iberia, American, Qantas and Emirates, plus Great Circle Mapper and
+  Where to Credit.
+- Cloudflare Worker deployment under `cloudflare/`.
