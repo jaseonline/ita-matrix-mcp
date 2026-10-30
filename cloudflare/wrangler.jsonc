@@ -12,7 +12,8 @@
 		"directory": "./public"
 	},
 	// Caches the discovered API key (30 days) and recent searches (6 hours).
-	// No id on purpose: `wrangler deploy` creates the namespace for you.
+	// Pinned to the existing namespace so deploys reuse its cache. Remove `id`
+	// to have `wrangler deploy` create a new namespace instead.
 	"kv_namespaces": [
 		{
 			"binding": "ITA_KV",
