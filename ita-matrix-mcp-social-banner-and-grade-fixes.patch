@@ -1,0 +1,621 @@
+From 012ef1d5461e57c872b3eba89126cc87d4e74fa6 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 02:02:40 +0000
+Subject: [PATCH] Add social banner workflow, address mcp-grade warnings, write
+ real SECURITY.md
+
+- social-banner workflow renders the README Socialify banner to a 1280x640 PNG artifact
+- .env.example (and gitignore exception), mcp.json manifest with a test keeping it in sync with registered tools
+- Document ITA_MATRIX_CACHE_DIR, which the server already reads
+- Quickstart in README, examples/, CHANGELOG.md, CONTRIBUTING.md
+- SECURITY.md: replace the GitHub template with a real policy
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_011aqACzLy288x2vMyoYBvs1
+---
+ .env.example                         | 30 +++++++++++
+ .github/workflows/social-banner.yml  | 77 ++++++++++++++++++++++++++++
+ .gitignore                           |  1 +
+ CHANGELOG.md                         | 35 +++++++++++++
+ CONTRIBUTING.md                      | 48 +++++++++++++++++
+ README.md                            | 23 +++++++++
+ SECURITY.md                          | 64 ++++++++++++++++++-----
+ examples/README.md                   | 20 ++++++++
+ examples/multi-city.json             |  8 +++
+ examples/open-jaw-star-alliance.json | 19 +++++++
+ examples/stdio-client.mjs            | 50 ++++++++++++++++++
+ mcp.json                             | 56 ++++++++++++++++++++
+ test/manifest.test.mjs               | 40 +++++++++++++++
+ 13 files changed, 457 insertions(+), 14 deletions(-)
+ create mode 100644 .env.example
+ create mode 100644 .github/workflows/social-banner.yml
+ create mode 100644 CHANGELOG.md
+ create mode 100644 CONTRIBUTING.md
+ create mode 100644 examples/README.md
+ create mode 100644 examples/multi-city.json
+ create mode 100644 examples/open-jaw-star-alliance.json
+ create mode 100644 examples/stdio-client.mjs
+ create mode 100644 mcp.json
+ create mode 100644 test/manifest.test.mjs
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..5367163
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,30 @@
++# Example configuration for ita-matrix-mcp. Copy to .env and adjust; .env is gitignored, so real values never get committed.
++#
++# Node 20.6+ can load the file directly:
++#   node --env-file=.env src/http-server.js
++#
++# Every variable is optional. Lines starting with "#" are unset by default; remove the "#" to use one.
++
++# --- HTTP server only (src/http-server.js) -------------------------------------------------------------------------
++
++# Listen port.
++PORT=3000
++
++# Mounts MCP at /mcp/<secret> instead of /mcp, so the URL itself acts as the credential.
++# Use a long random value, e.g. the output of: openssl rand -hex 24
++# ITA_MATRIX_SECRET_PATH=
++
++# Comma-separated Host allowlist, guarding against DNS rebinding. Example: mcp.example.com
++# ITA_MATRIX_ALLOWED_HOSTS=
++
++# --- Both entrypoints (stdio and HTTP) -----------------------------------------------------------------------------
++
++# Pin the upstream Matrix API key instead of discovering it automatically. Normally leave this unset.
++# ITA_MATRIX_API_KEY=
++
++# Directory for the 30-day cache of the discovered API key (file: api-key.json).
++# Default: ~/.cache/ita-matrix-mcp
++# ITA_MATRIX_CACHE_DIR=
++
++# Upstream timeout in milliseconds. Multi-city searches are slow.
++ITA_MATRIX_TIMEOUT_MS=150000
+diff --git a/.github/workflows/social-banner.yml b/.github/workflows/social-banner.yml
+new file mode 100644
+index 0000000..fc0b6a0
+--- /dev/null
++++ b/.github/workflows/social-banner.yml
+@@ -0,0 +1,77 @@
++---
++# Renders the banner at the top of README.md into a 1280x640 PNG, ready to use as the repository social preview.
++#
++# README.md is the single source of truth: the Socialify URL in its first <img> tag defines the design. Socialify
++# returns SVG, which GitHub's social preview does not accept, so the SVG is rasterised with headless Chromium.
++#
++# GitHub has no API for setting the social preview, so the PNG is published as a workflow artifact. Upload it once
++# under Settings -> General -> Social preview. The image bakes in star/fork/issue/PR counts, hence the monthly refresh.
++name: Social Banner
++
++on:
++  push:
++    branches: ["master"]
++    paths:
++      - README.md
++      - cloudflare/src/assets/**
++      - .github/workflows/social-banner.yml
++  schedule:
++    - cron: "0 3 1 * *" # First of the month
++  workflow_dispatch: # Manual trigger option
++
++permissions:
++  contents: read
++
++jobs:
++  render:
++    runs-on: ubuntu-26.04
++    steps:
++      - uses: actions/checkout@v4
++
++      - name: Fetch banner SVG
++        run: |
++          set -euo pipefail
++          url="$(grep -o -m1 'https://socialify\.[a-z.]*/[^" ]*' README.md | head -n1 || true)"
++          if [ -z "$url" ]; then
++            echo "::error::No Socialify URL found in README.md"
++            exit 1
++          fi
++          # The README uses theme=Auto, which depends on the viewer. Pin a theme so the output is deterministic.
++          url="$(printf '%s' "$url" | sed -E 's/&theme=[^&]*//')&theme=Dark"
++          curl -fsSL --retry 3 --retry-delay 5 --max-time 60 -o banner.svg "$url"
++          head -c 200 banner.svg | grep -q '<svg' || { echo "::error::Response was not an SVG"; exit 1; }
++
++      - name: Render PNG
++        run: |
++          set -euo pipefail
++          npx --yes playwright@1 install --with-deps chromium
++          npx --yes playwright@1 screenshot --viewport-size=1280,640 "file://${PWD}/banner.svg" social-preview.png
++
++      - name: Validate PNG
++        run: |
++          set -euo pipefail
++          info="$(file social-preview.png)"
++          echo "$info"
++          case "$info" in
++            *"PNG image data, 1280 x 640"*) ;;
++            *) echo "::error::Expected a 1280x640 PNG"; exit 1 ;;
++          esac
++          size="$(stat -c %s social-preview.png)"
++          # GitHub rejects social preview images of 1 MB or more.
++          if [ "$size" -ge 1000000 ]; then
++            echo "::error::social-preview.png is ${size} bytes; GitHub's limit is 1 MB"
++            exit 1
++          fi
++          {
++            echo "### Social preview rendered"
++            echo ""
++            echo "${size} bytes, 1280x640. Download the \`social-preview\` artifact and upload it under"
++            echo "**Settings -> General -> Social preview**."
++          } >> "$GITHUB_STEP_SUMMARY"
++
++      - uses: actions/upload-artifact@v4
++        with:
++          name: social-preview
++          path: social-preview.png
++          if-no-files-found: error
++          retention-days: 90
+diff --git a/.gitignore b/.gitignore
+index 433978d..b7ca645 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -4,3 +4,4 @@ npm-debug.log*
+ .env.*
+ *.log
+ .DS_Store
++!.env.example
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+new file mode 100644
+index 0000000..06b8a19
+--- /dev/null
++++ b/CHANGELOG.md
+@@ -0,0 +1,35 @@
++# Changelog
++
++All notable changes to this project are recorded here. The format follows
++[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
++[semantic versioning](https://semver.org/).
++
++## [Unreleased]
++
++### Added
++
++- `mcp.json` manifest describing the transports, environment variables and tools, with a test that keeps it in step
++  with the tools the server actually registers.
++- `.env.example` documenting every environment variable.
++- `examples/`: a runnable stdio client and sample `search_flights` arguments.
++- `CONTRIBUTING.md` and this changelog.
++- `social-banner` workflow that renders the README banner to a 1280x640 PNG for use as the repository social preview.
++
++### Changed
++
++- `SECURITY.md` replaced the GitHub template with a real policy: supported versions, private reporting, scope and
++  deployment hardening.
++
++## [1.0.0]
++
++### Added
++
++- Five tools: `search_flights`, `get_itinerary_details`, `search_flexible_dates`, `lookup_airport` and
++  `routing_language_reference`.
++- Multi-city and open-jaw searches (1-6 legs) with per-leg ITA routing codes and extension codes.
++- stdio and Streamable HTTP entrypoints, with optional secret path and Host allowlist for the HTTP server.
++- Process-wide search cache (6-hour TTL) so `get_itinerary_details` survives session churn, with automatic re-run when
++  Matrix's own pricing session expires.
++- Booking hand-over links for British Airways, Iberia, American, Qantas and Emirates, plus Great Circle Mapper and
++  Where to Credit.
++- Cloudflare Worker deployment under `cloudflare/`.
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+new file mode 100644
+index 0000000..0b8bb7a
+--- /dev/null
++++ b/CONTRIBUTING.md
+@@ -0,0 +1,48 @@
++# Contributing
++
++Thanks for taking an interest. Issues and pull requests are welcome.
++
++## Setup
++
++Node.js 20 or later is required.
++
++```bash
++git clone https://github.com/jaseonline/ita-matrix-mcp.git
++cd ita-matrix-mcp
++npm install
++npm test
++```
++
++`npm test` runs the unit tests and the offline stdio smoke test. Neither needs network access.
++
++The live tests talk to the real ITA Matrix service, take 20-60 seconds per search, and should be run sparingly:
++
++```bash
++npm run test:live
++```
++
++Matrix's rate limits are undocumented, so please do not add live tests to CI.
++
++## Making a change
++
++1. Branch from `master`; it is protected, so changes go through a pull request.
++2. Keep changes focused, and add or update a test where behaviour changes.
++3. If you add, rename or remove a tool, update `mcp.json` and the tool table in `README.md`. `test/manifest.test.mjs`
++   fails when `mcp.json` and the registered tools disagree.
++4. If you change an environment variable, update `.env.example`, the table in `README.md` and `mcp.json`.
++5. Add a line under `[Unreleased]` in `CHANGELOG.md`.
++
++## Checks that run on pull requests
++
++- **Lint Code Base**: super-linter over any changed GitHub Actions workflows.
++- **mcp-grade**: static grading of the repository as an MCP server; the build fails below grade C.
++
++## Security
++
++Never commit secrets, `.env` files or API keys. Report vulnerabilities as described in [SECURITY.md](SECURITY.md)
++rather than in a public issue.
++
++## Licence
++
++By contributing you agree that your contribution is licensed under GPL-2.0-only, the same as the project. See
++[LICENSE](LICENSE).
+diff --git a/README.md b/README.md
+index 78101c0..2fdc18e 100644
+--- a/README.md
++++ b/README.md
+@@ -12,6 +12,19 @@ alliance, or flight count.
+ Results are real, priced, availability-checked fares. They are not bookable
+ here — take the flight numbers to the airline or an OTA to ticket them.
+ 
++## Quickstart
++
++```bash
++git clone https://github.com/jaseonline/ita-matrix-mcp.git
++cd ita-matrix-mcp
++npm install
++node examples/stdio-client.mjs                      # offline check: lists the tools
++node examples/stdio-client.mjs JFK LHR 2026-12-01   # live one-way search (20-60s)
++```
++
++Then connect it to Claude as described under [Running it](#running-it). Sample `search_flights`
++arguments are in [`examples/`](examples/).
++
+ ## Tools
+ 
+ | Tool | What it does |
+@@ -88,8 +101,12 @@ configured through `claude_desktop_config.json`.
+ | `ITA_MATRIX_SECRET_PATH` | *(unset)* | Mounts MCP at `/mcp/<secret>` instead of `/mcp`. The URL then acts as the credential. |
+ | `ITA_MATRIX_ALLOWED_HOSTS` | *(unset)* | Comma-separated Host allowlist, guarding against DNS rebinding. |
+ | `ITA_MATRIX_API_KEY` | auto | Pin the upstream key instead of discovering it. |
++| `ITA_MATRIX_CACHE_DIR` | `~/.cache/ita-matrix-mcp` | Where the discovered API key is cached for 30 days. |
+ | `ITA_MATRIX_TIMEOUT_MS` | `150000` | Upstream timeout. Multi-city searches are slow. |
+ 
++A documented template is in [`.env.example`](.env.example); Node 20.6+ can load it with
++`node --env-file=.env src/http-server.js`.
++
+ `GET /health` returns status and active session count, for Coolify's health check.
+ 
+ Each HTTP session gets its own server instance. Idle sessions are swept after 30
+@@ -161,6 +178,12 @@ Live tests hit the real service and take 20–60s per search.
+ - Prior art: [`itamx`](https://github.com/yogevkr/itamx), a Python CLI/MCP for
+   the same API, which is where the protocol details were confirmed.
+ 
++## Contributing and changelog
++
++See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks pull requests go through, and
++[CHANGELOG.md](CHANGELOG.md) for release notes. `mcp.json` is a machine-readable summary of the transports,
++environment variables and tools.
++
+ ## Licence
+ 
+ GPL-2.0-only; see [LICENSE](LICENSE). The booking-link builders in `src/handoff.js`
+diff --git a/SECURITY.md b/SECURITY.md
+index 034e848..51856db 100644
+--- a/SECURITY.md
++++ b/SECURITY.md
+@@ -1,21 +1,57 @@
+ # Security Policy
+ 
+-## Supported Versions
++ita-matrix-mcp is a personal project maintained on a best-effort basis. Security reports are still taken seriously.
+ 
+-Use this section to tell people about which versions of your project are
+-currently being supported with security updates.
++## Supported versions
+ 
+-| Version | Supported          |
+-| ------- | ------------------ |
+-| 5.1.x   | :white_check_mark: |
+-| 5.0.x   | :x:                |
+-| 4.0.x   | :white_check_mark: |
+-| < 4.0   | :x:                |
++Only the latest commit on `master` (currently version 1.0.0) receives fixes. There are no long-lived release branches,
++so please reproduce an issue against current `master` before reporting it.
+ 
+-## Reporting a Vulnerability
++## Reporting a vulnerability
+ 
+-Use this section to tell people how to report a vulnerability.
++Please **do not open a public issue** for a security problem.
+ 
+-Tell them where to go, how often they can expect to get an update on a
+-reported vulnerability, what to expect if the vulnerability is accepted or
+-declined, etc.
++Use GitHub's private reporting instead: open the repository's **Security** tab, choose **Report a vulnerability**, and
++describe the issue. Helpful details include:
++
++- what you found and which component it affects (stdio server, HTTP server, Cloudflare Worker, booking-link builders);
++- steps or a proof of concept to reproduce it;
++- the version or commit, and how the server was deployed (stdio, Docker, Cloudflare Workers).
++
++You can expect an acknowledgement within about a week. After that I will confirm whether the report is accepted,
++work on a fix, and tell you when it lands. If I decide the report is out of scope or not a vulnerability, I will explain
++why. Credit in the changelog is available if you want it.
++
++## Scope
++
++In scope:
++
++- The MCP server code under `src/` and the Cloudflare Worker under `cloudflare/`.
++- The HTTP transport: the optional secret path (`ITA_MATRIX_SECRET_PATH`), the Host allowlist
++  (`ITA_MATRIX_ALLOWED_HOSTS`), session handling and DNS-rebinding protection.
++- Handling of tool input, including anything that could lead to unintended outbound requests or malformed
++  booking links.
++- Secrets, credentials or personal data committed to the repository.
++
++Out of scope:
++
++- ITA Matrix, Google, airline and booking sites themselves. Report issues in those to their owners.
++- The upstream API key. The server discovers a key that Matrix's own web app ships to every visitor; it is public by
++  design, not a leaked secret.
++- Matrix rate limiting or blocking of your server's IP address.
++- Findings that need an attacker to already control the machine, the environment variables or the deployment account.
++- Denial of service through deliberately expensive searches on a server you chose to expose publicly without the
++  hardening described below.
++
++## Running it safely
++
++- **Use HTTPS.** Remote connectors need a public HTTPS URL with a valid certificate.
++- **Do not expose the HTTP server unprotected.** Set `ITA_MATRIX_SECRET_PATH` to a long random value (for example
++  `openssl rand -hex 24`) so the URL acts as the credential, and set `ITA_MATRIX_ALLOWED_HOSTS` to your hostname.
++- **Keep secrets out of git.** Copy `.env.example` to `.env`; `.env` is gitignored. Treat the secret-path URL like a
++  password and rotate it if it leaks.
++- **Understand what is stored.** Search results are cached in memory only, for 6 hours, under unguessable IDs. The one
++  thing written to disk is the discovered (public) Matrix API key, cached for 30 days in
++  `~/.cache/ita-matrix-mcp/api-key.json`; set `ITA_MATRIX_CACHE_DIR` to move it. There are no user accounts.
++- **Expect to draw traffic.** A public instance sends its searches from your server's IP address to Google, whose rate
++  limits are undocumented.
+diff --git a/examples/README.md b/examples/README.md
+new file mode 100644
+index 0000000..f545a3a
+--- /dev/null
++++ b/examples/README.md
+@@ -0,0 +1,20 @@
++# Examples
++
++| File | What it shows |
++|---|---|
++| [`stdio-client.mjs`](stdio-client.mjs) | A runnable MCP client. Offline by default (lists tools, prints the routing reference); pass `ORIGIN DEST YYYY-MM-DD` for a live one-way search. |
++| [`multi-city.json`](multi-city.json) | `search_flights` arguments for a three-leg trip, with a per-leg routing code on the last leg. |
++| [`open-jaw-star-alliance.json`](open-jaw-star-alliance.json) | An open-jaw trip using extension codes (`alliance`, `maxconnect`) and padded routing (`F? LHR F?`). |
++
++The JSON files are the `arguments` object for the `search_flights` tool. Paste one into a Claude conversation
++("search ITA Matrix with these arguments") or send it with any MCP client.
++
++Run the client from the repository root:
++
++```bash
++npm install
++node examples/stdio-client.mjs
++```
++
++Routing-code syntax is documented in the main [README](../README.md#routing-codes) and, in full, by the
++`routing_language_reference` tool.
+diff --git a/examples/multi-city.json b/examples/multi-city.json
+new file mode 100644
+index 0000000..2bae3bf
+--- /dev/null
++++ b/examples/multi-city.json
+@@ -0,0 +1,8 @@
++{
++  "slices": [
++    { "origin": "JFK", "destination": "HND", "date": "2026-10-15" },
++    { "origin": "HND", "destination": "SIN", "date": "2026-10-22" },
++    { "origin": "SIN", "destination": "JFK", "date": "2026-10-30", "routing": "AA+ LHR AA+" }
++  ],
++  "cabin": "BUSINESS"
++}
+diff --git a/examples/open-jaw-star-alliance.json b/examples/open-jaw-star-alliance.json
+new file mode 100644
+index 0000000..3be9719
+--- /dev/null
++++ b/examples/open-jaw-star-alliance.json
+@@ -0,0 +1,19 @@
++{
++  "slices": [
++    {
++      "origin": "JFK",
++      "destination": "LHR",
++      "date": "2026-11-12",
++      "extraCodes": "alliance star-alliance; maxconnect 240"
++    },
++    {
++      "origin": "CDG",
++      "destination": "JFK",
++      "date": "2026-11-20",
++      "routing": "F? LHR F?"
++    }
++  ],
++  "cabin": "PREMIUM_COACH",
++  "sort": "price",
++  "limit": 5
++}
+diff --git a/examples/stdio-client.mjs b/examples/stdio-client.mjs
+new file mode 100644
+index 0000000..9a9a19a
+--- /dev/null
++++ b/examples/stdio-client.mjs
+@@ -0,0 +1,50 @@
++/**
++ * Minimal MCP client for ita-matrix-mcp over stdio.
++ *
++ * Usage (from the repository root, after `npm install`):
++ *
++ *   node examples/stdio-client.mjs                          # offline: list tools, print the routing reference
++ *   node examples/stdio-client.mjs JFK LHR 2026-12-01       # live: one-way search, top 3 by price (20-60s)
++ *
++ * The offline mode needs no network access and is a quick way to confirm the server starts and registers its tools.
++ */
++
++import { Client } from "@modelcontextprotocol/sdk/client/index.js";
++import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
++
++const [origin, destination, date] = process.argv.slice(2);
++
++const transport = new StdioClientTransport({
++  command: process.execPath,
++  args: ["src/server.js"],
++});
++const client = new Client({ name: "example-client", version: "1.0.0" });
++await client.connect(transport);
++
++try {
++  const { tools } = await client.listTools();
++  console.log("Tools:");
++  for (const t of tools) console.log(`  ${t.name}  ${t.title ?? ""}`);
++
++  const textOf = (result) => result.content.map((c) => c.text).join("\n");
++
++  if (origin && destination && date) {
++    console.log(`\nSearching ${origin} -> ${destination} on ${date} (this takes 20-60s)...\n`);
++    const result = await client.callTool(
++      {
++        name: "search_flights",
++        arguments: { slices: [{ origin, destination, date }], limit: 3 },
++      },
++      undefined,
++      { timeout: 180_000 }
++    );
++    console.log(textOf(result));
++    process.exitCode = result.isError ? 1 : 0;
++  } else {
++    const result = await client.callTool({ name: "routing_language_reference", arguments: {} });
++    console.log("\nRouting language reference (first 15 lines):\n");
++    console.log(textOf(result).split("\n").slice(0, 15).join("\n"));
++  }
++} finally {
++  await client.close();
++}
+diff --git a/mcp.json b/mcp.json
+new file mode 100644
+index 0000000..fea2521
+--- /dev/null
++++ b/mcp.json
+@@ -0,0 +1,56 @@
++{
++  "name": "ita-matrix",
++  "title": "ITA Matrix",
++  "version": "1.0.0",
++  "description": "MCP server for ITA Matrix airfare search, with multi-city and routing-language support",
++  "license": "GPL-2.0-only",
++  "repository": "https://github.com/jaseonline/ita-matrix-mcp",
++  "runtime": { "node": ">=20" },
++  "transports": {
++    "stdio": {
++      "command": "node",
++      "args": ["src/server.js"]
++    },
++    "streamable-http": {
++      "entrypoint": "src/http-server.js",
++      "path": "/mcp",
++      "secretPath": "/mcp/<ITA_MATRIX_SECRET_PATH>",
++      "health": "/health"
++    }
++  },
++  "environment": [
++    { "name": "PORT", "default": "3000", "description": "HTTP listen port." },
++    { "name": "ITA_MATRIX_SECRET_PATH", "description": "Mounts MCP at /mcp/<secret>; the URL then acts as the credential." },
++    { "name": "ITA_MATRIX_ALLOWED_HOSTS", "description": "Comma-separated Host allowlist, guarding against DNS rebinding." },
++    { "name": "ITA_MATRIX_API_KEY", "description": "Pin the upstream API key instead of discovering it." },
++    { "name": "ITA_MATRIX_CACHE_DIR", "default": "~/.cache/ita-matrix-mcp", "description": "Directory for the 30-day cache of the discovered API key." },
++    { "name": "ITA_MATRIX_TIMEOUT_MS", "default": "150000", "description": "Upstream timeout in milliseconds." }
++  ],
++  "tools": [
++    {
++      "name": "search_flights",
++      "title": "Search flights (multi-city capable)",
++      "description": "Search ITA Matrix for itineraries. 1-6 legs: one-way, round-trip, multi-city or open-jaw, each with its own routing code."
++    },
++    {
++      "name": "get_itinerary_details",
++      "title": "Expand one itinerary",
++      "description": "Per-segment booking class, fare basis and aircraft for one itinerary from a previous search, plus an agent brief and booking links."
++    },
++    {
++      "name": "search_flexible_dates",
++      "title": "Find the cheapest dates",
++      "description": "Scan a range of departure dates and report the cheapest fare on each."
++    },
++    {
++      "name": "lookup_airport",
++      "title": "Look up airport / city codes",
++      "description": "Resolve a partial city or airport name to IATA codes, including metro codes."
++    },
++    {
++      "name": "routing_language_reference",
++      "title": "ITA routing language reference",
++      "description": "Full syntax for the routing and extraCodes fields."
++    }
++  ]
++}
+diff --git a/test/manifest.test.mjs b/test/manifest.test.mjs
+new file mode 100644
+index 0000000..cbd57ba
+--- /dev/null
++++ b/test/manifest.test.mjs
+@@ -0,0 +1,40 @@
++/**
++ * Keeps mcp.json honest: its tool list and version must match what the server
++ * really registers and what package.json declares. Offline; no network access.
++ */
++
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++
++import { Client } from "@modelcontextprotocol/sdk/client/index.js";
++import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
++
++import { createServer } from "../src/create-server.js";
++
++const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
++const manifest = readJson("../mcp.json");
++const pkg = readJson("../package.json");
++
++test("mcp.json tools match the tools the server registers", async () => {
++  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
++  const server = createServer();
++  const client = new Client({ name: "manifest-test", version: "1.0.0" });
++  await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
++
++  const { tools } = await client.listTools();
++  await client.close();
++
++  const registered = tools.map((t) => t.name).sort();
++  const declared = manifest.tools.map((t) => t.name).sort();
++  assert.deepEqual(declared, registered);
++});
++
++test("mcp.json version matches package.json", () => {
++  assert.equal(manifest.version, pkg.version);
++});
++
++test("mcp.json licence and description match package.json", () => {
++  assert.equal(manifest.license, pkg.license);
++  assert.equal(manifest.description, pkg.description);
++});
+-- 
+2.43.0
+
