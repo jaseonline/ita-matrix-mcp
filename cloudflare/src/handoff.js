@@ -277,23 +277,30 @@ export function buildLinks(slices, pax, opts = {}) {
     return [];
   }
   const links = [];
+  // One builder failing (for example a segment with no arrival time) must not
+  // take the other links down with it.
+  const add = (name, build) => {
+    try {
+      const url = build();
+      if (url) links.push([name, url]);
+    } catch {
+      /* skip this link */
+    }
+  };
   if (anyOf(slices, "BA", "IB", "EI")) {
-    links.push(["British Airways", baLink(slices, pax, { edition: opts.baEdition, language: opts.baLanguage })]);
+    add("British Airways", () => baLink(slices, pax, { edition: opts.baEdition, language: opts.baLanguage }));
   }
   if (anyOf(slices, "QF", "JQ", "NZ")) {
-    links.push(["Qantas", qfLink(slices, pax, { edition: opts.qfEdition, currency: opts.qfCurrency })]);
+    add("Qantas", () => qfLink(slices, pax, { edition: opts.qfEdition, currency: opts.qfCurrency }));
   }
   if (anyOf(slices, "AA")) {
-    const aa = aaLink(slices, pax, { edition: opts.aaEdition });
-    if (aa) links.push(["American", aa]);
+    add("American", () => aaLink(slices, pax, { edition: opts.aaEdition }));
   }
   if (anyOf(slices, "IB", "BA")) {
-    const ib = ibLink(slices, pax, { edition: opts.ibEdition, price: opts.price });
-    if (ib) links.push(["Iberia", ib]);
+    add("Iberia", () => ibLink(slices, pax, { edition: opts.ibEdition, price: opts.price }));
   }
   if (anyOf(slices, "EK")) {
-    const ek = ekLink(slices, pax, { edition: opts.ekEdition });
-    if (ek) links.push(["Emirates (search only)", ek]);
+    add("Emirates (search only)", () => ekLink(slices, pax, { edition: opts.ekEdition }));
   }
   links.push(["Route map", gcmLink(slices)], ["Where to Credit", wheretocreditLink(slices)]);
   return links.map(([name, url]) => ({ name, url }));

@@ -149,3 +149,12 @@ test("Iberia link pins class, fare basis and slices", () => {
   assert.ok(url.includes("&Cabin1=First&Carrier1=IB&Origin1=DUB&Destination1=DXB&BookingCode1=A&FlightNumber1=8162&DepartureDate1=2027-06-11&FareBasis1=AFXTEST"));
   assert.ok(url.endsWith("&Slice1=1,2&Slice2=3,4") || url.includes("&Slice1=1,2&") && url.endsWith("&Slice2=3,4"));
 });
+
+test("one failing link builder does not drop the others", () => {
+  const b = JSON.parse(JSON.stringify(booking));
+  b.itinerary.slices[0].segments[0].carrier.code = "AA";
+  b.itinerary.slices[0].segments[0].arrival = undefined; // American needs arrival times
+  const names = buildLinks(flatten(b), { adults: 1 }).map((l) => l.name);
+  assert.ok(!names.includes("American"));
+  assert.ok(names.includes("Qantas") && names.includes("Route map"), names.join());
+});
