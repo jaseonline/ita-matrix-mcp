@@ -1,4 +1,4 @@
-# ITA Matrix MCP
+<img src="https://socialify.dev/jaseonline/ita-matrix-mcp/image?custom_description=%F0%9F%9B%AB+Breathing+new+life+into+an+old+tool.+An+ITA+Matrix+MCP+server+to+optimise+airfare+searches.+multi-city+trips+and+ITA+routing+language%2C+over+STDIO+or+Streamable+HTTP.&description=1&font=Jost&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fjaseonline%2Fita-matrix-mcp%2F949385637ea426615d72f498df8205bf3f25927c%2Fcloudflare%2Fsrc%2Fassets%2Fita-software-logo-svg-vector.svg&name=1&owner=1&pattern=Solid&pulls=1&stargazers=1&theme=Auto" ></img>
 
 An MCP server that searches [ITA Matrix](https://matrix.itasoftware.com) —
 Google's fare engine, the one behind a lot of airline and OTA search — so Claude
