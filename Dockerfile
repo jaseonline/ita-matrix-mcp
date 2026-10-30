@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install deps first so the layer caches across code-only changes.
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY src ./src
 

@@ -5,8 +5,8 @@ jobs:
   scan:
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: lipon101/mcp-grade@v1.0.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: lipon101/mcp-grade@0752a8ae31d2093acd0753ec6cec46ff10ea9656 # v1.0.0
         id: scan
         with:
           fail-under: C
