@@ -8,7 +8,23 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 import { KeyProvider } from "../src/keys.js";
+import { trimSlashes } from "../src/secret-path.js";
 import { SearchStore } from "../src/store.js";
+
+test("trimSlashes strips only leading and trailing slashes", () => {
+  assert.equal(trimSlashes("/abc/"), "abc");
+  assert.equal(trimSlashes("///a/b///"), "a/b");
+  assert.equal(trimSlashes("abc"), "abc");
+  assert.equal(trimSlashes("///"), "");
+  assert.equal(trimSlashes(""), "");
+  assert.equal(trimSlashes(undefined), "");
+});
+
+test("trimSlashes stays fast on long runs of slashes", () => {
+  const start = performance.now();
+  assert.equal(trimSlashes(`a${"/".repeat(1_000_000)}b`).length, 1_000_002);
+  assert.ok(performance.now() - start < 1000);
+});
 
 const NODE_ONLY = ["http-server.js", "node-runtime.js", "server.js"];
 const srcDir = new URL("../src/", import.meta.url);

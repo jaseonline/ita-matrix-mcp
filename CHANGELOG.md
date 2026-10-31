@@ -32,6 +32,8 @@ All notable changes to this project are recorded here. The format follows
 
 - The "Unknown Search ID" error no longer lists cached Search IDs, which let any client on a shared instance find and
   read another client's results.
+- `ITA_MATRIX_SECRET_PATH` is trimmed without a backtracking regex (CodeQL `js/polynomial-redos`), and the `mcp-grade`
+  workflow's token is limited to read access.
 
 ## [1.0.0]
 

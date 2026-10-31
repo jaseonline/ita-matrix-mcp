@@ -21,13 +21,14 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { createNodeServer } from "./node-runtime.js";
+import { trimSlashes } from "./secret-path.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 
 // Mount path for the MCP endpoint. Set to something random to keep the server
 // from being usable by anyone who merely learns the hostname.
-const SECRET = (process.env.ITA_MATRIX_SECRET_PATH || "").replace(/^\/+|\/+$/g, "");
+const SECRET = trimSlashes(process.env.ITA_MATRIX_SECRET_PATH);
 const MCP_PATH = SECRET ? `/mcp/${SECRET}` : "/mcp";
 
 // Hosts allowed in the Host header, guarding against DNS-rebinding. Coolify
