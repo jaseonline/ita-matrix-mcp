@@ -8,7 +8,7 @@ jobs:
   maintenance:
     runs-on: ubuntu-26.04
     permissions:
-      contents: write
+      contents: read
       issues: write
       pull-requests: write
       id-token: write
