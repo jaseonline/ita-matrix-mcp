@@ -19,10 +19,10 @@ import {
   renderDetail,
   parsePrice,
   hm,
-} from "./format.js";
-import { ROUTING_REFERENCE } from "./routing-reference.js";
-import { registerGuidance } from "./guidance.js";
-import { flatten, buildLinks, agentBrief, displayPrice } from "./handoff.js";
+} from "../../src/format.js";
+import { ROUTING_REFERENCE } from "../../src/routing-reference.js";
+import { registerGuidance } from "../../src/guidance.js";
+import { flatten, buildLinks, agentBrief, displayPrice } from "../../src/handoff.js";
 import { SearchStore } from "./store.js";
 
 /** Flight numbers flown, in order — stable across re-runs of the same search. */

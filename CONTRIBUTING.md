@@ -30,8 +30,7 @@ Matrix's rate limits are undocumented, so please do not add live tests to CI.
 3. If you add, rename or remove a tool, update `mcp.json` and the tool table in `README.md`. `test/manifest.test.mjs`
    fails when `mcp.json` and the registered tools disagree.
 4. If you change an environment variable, update `.env.example`, the table in `README.md` and `mcp.json`.
-5. Prompts and resources live in `src/guidance.js`. Copy changes to `cloudflare/src/guidance.js`, and list new ones in
-   `mcp.json`. `npm test` fails if the copies or the manifest disagree.
+5. Prompts and resources live in `src/guidance.js`. List new ones in `mcp.json`; `npm test` fails if it disagrees.
 6. Add a line under `[Unreleased]` in `CHANGELOG.md`.
 
 ## Checks that run on pull requests

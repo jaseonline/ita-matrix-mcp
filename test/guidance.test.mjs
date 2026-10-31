@@ -4,7 +4,6 @@
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -13,7 +12,6 @@ import { createServer } from "../src/create-server.js";
 import { ROUTING_REFERENCE } from "../src/routing-reference.js";
 
 const client = new Client({ name: "guidance-test", version: "1.0.0" });
-const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8").replaceAll("\r\n", "\n");
 const promptText = async (name, args) =>
   (await client.getPrompt({ name, arguments: args })).messages[0].content.text;
 
@@ -23,12 +21,6 @@ before(async () => {
 });
 
 after(() => client.close());
-
-for (const file of ["guidance.js", "routing-reference.js"]) {
-  test(`${file} is the same in the Node server and the Worker`, () => {
-    assert.equal(read(`../cloudflare/src/${file}`), read(`../src/${file}`));
-  });
-}
 
 test("the routing resource matches the routing tool", async () => {
   const { contents } = await client.readResource({ uri: "ita://reference/routing" });

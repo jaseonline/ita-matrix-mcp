@@ -1,12 +1,6 @@
 /**
  * MCP prompts and resources: how to get good results out of the tools.
  *
- * The Node server (SDK v1) and the Cloudflare Worker (SDK v2) each run their
- * own create-server.js, so this file is shared by copy, like format.js and
- * handoff.js: edit src/guidance.js and copy it to cloudflare/src/. A test fails
- * if the two differ. It imports nothing from the SDK, and argsSchema stays a
- * raw shape because that is the one form both SDK versions accept.
- *
  * Prompts carry no one's home airport or currency: those are arguments, so the
  * public defaults stay neutral.
  */

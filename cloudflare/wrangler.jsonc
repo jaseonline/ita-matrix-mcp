@@ -7,6 +7,13 @@
 		"nodejs_compat"
 	],
 	"workers_dev": true,
+	// Shared code lives in ../src and would otherwise resolve these from the
+	// root node_modules, bundling a second SDK. Deploys need the whole repo, but
+	// only this folder's npm install.
+	"alias": {
+		"@modelcontextprotocol/server": "./node_modules/@modelcontextprotocol/server",
+		"zod": "./node_modules/zod"
+	},
 	// Public static files (the MCP server icon, served at /icon.png).
 	"assets": {
 		"directory": "./public"
