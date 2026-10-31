@@ -84,6 +84,21 @@ ok(sf?.inputSchema?.properties?.slices?.maxItems === 6, "search_flights schema: 
 r = await call("routing_language_reference", {});
 ok(/HOW THE GRAMMAR WORKS/.test(textOf(r)), "routing_language_reference returns the reference");
 
+// --- prompts and resources ---------------------------------------------------
+r = await rpc("prompts/list");
+const promptNames = (r.msg?.result?.prompts || []).map((p) => p.name).sort();
+ok(JSON.stringify(promptNames) === JSON.stringify(["explain_empty_search", "hunt_premium_fare", "plan_trip"]), `prompts/list -> ${promptNames.join(", ")}`);
+
+r = await rpc("prompts/get", { name: "plan_trip", arguments: { trip: "London to Tokyo in May" } });
+ok(/London to Tokyo in May/.test(r.msg?.result?.messages?.[0]?.content?.text || ""), "prompts/get fills in plan_trip");
+
+r = await rpc("resources/list");
+const uris = (r.msg?.result?.resources || []).map((x) => x.uri).sort();
+ok(JSON.stringify(uris) === JSON.stringify(["ita://guides/fare-strategy", "ita://reference/routing"]), `resources/list -> ${uris.join(", ")}`);
+
+r = await rpc("resources/read", { uri: "ita://reference/routing" });
+ok(/HOW THE GRAMMAR WORKS/.test(r.msg?.result?.contents?.[0]?.text || ""), "resources/read returns the routing reference");
+
 // --- validation errors (no upstream call) ------------------------------------
 r = await call("search_flights", { slices: [{ origin: "LHR", destination: "JFK", date: "10/12/2026" }] });
 ok(r.msg?.result?.isError === true && /YYYY-MM-DD/.test(textOf(r)), "search_flights rejects a bad date");

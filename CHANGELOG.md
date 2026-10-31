@@ -13,12 +13,16 @@ All notable changes to this project are recorded here. The format follows
 - `.env.example` documenting every environment variable.
 - `examples/`: a runnable stdio client and sample `search_flights` arguments.
 - `CONTRIBUTING.md` and this changelog.
+- MCP prompts (`plan_trip`, `hunt_premium_fare`, `explain_empty_search`) and resources (`ita://reference/routing`,
+  `ita://guides/fare-strategy`) on both the Node server and the Cloudflare Worker.
 - `social-banner` workflow that renders the README banner to a 1280x640 PNG for use as the repository social preview.
 
 ### Changed
 
 - `SECURITY.md` replaced the GitHub template with a real policy: supported versions, private reporting, scope and
   deployment hardening.
+- The `salesCity` description no longer claims it finds cheaper pricing, and the Node routing reference now carries the
+  same origin and premium-cabin notes as the Worker's.
 
 ### Security
 

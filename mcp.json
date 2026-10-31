@@ -52,5 +52,36 @@
       "title": "ITA routing language reference",
       "description": "Full syntax for the routing and extraCodes fields."
     }
+  ],
+  "prompts": [
+    {
+      "name": "plan_trip",
+      "title": "Plan a trip",
+      "description": "Turn a trip described in plain words into a sequence of Matrix searches, ending with the best one to three priced options."
+    },
+    {
+      "name": "hunt_premium_fare",
+      "title": "Hunt for a premium-cabin fare",
+      "description": "Look for a cheap business or first fare by varying the origin, then narrowing by alliance and fare bucket."
+    },
+    {
+      "name": "explain_empty_search",
+      "title": "Explain an empty search",
+      "description": "Work out why a search returned nothing by relaxing one constraint at a time, then checking whether Matrix itself is responding."
+    }
+  ],
+  "resources": [
+    {
+      "uri": "ita://reference/routing",
+      "title": "ITA routing language reference",
+      "description": "Syntax for the routing and extraCodes fields, with worked examples.",
+      "mimeType": "text/plain"
+    },
+    {
+      "uri": "ita://guides/fare-strategy",
+      "title": "Fare strategy guide",
+      "description": "Search order and tactics for finding cheaper fares with Matrix.",
+      "mimeType": "text/markdown"
+    }
   ]
 }

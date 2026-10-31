@@ -86,6 +86,12 @@ check(
   !/Known IDs/.test(unknown.content?.[0]?.text || "")
 );
 
+const { prompts } = await client.listPrompts();
+check("prompts are listed", prompts.some((p) => p.name === "plan_trip"), `${prompts.length} prompts`);
+
+const guide = await client.readResource({ uri: "ita://guides/fare-strategy" });
+check("fare strategy resource reads", /Search order/.test(guide.contents?.[0]?.text || ""));
+
 if (LIVE) {
   console.log("\n--- live ---");
 

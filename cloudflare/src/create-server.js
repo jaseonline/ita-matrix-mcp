@@ -21,6 +21,7 @@ import {
   hm,
 } from "./format.js";
 import { ROUTING_REFERENCE } from "./routing-reference.js";
+import { registerGuidance } from "./guidance.js";
 import { flatten, buildLinks, agentBrief, displayPrice } from "./handoff.js";
 import { SearchStore } from "./store.js";
 
@@ -124,8 +125,8 @@ const commonSchema = {
     .string()
     .optional()
     .describe(
-      "IATA city code for point of sale. Changes which fares are filed and " +
-        "offered — useful for finding cheaper origin-country pricing."
+      "IATA city code for point of sale. Mostly sets the default currency and " +
+        "rarely changes the fare; to find cheaper pricing, vary the origin instead."
     ),
   ...paxSchema,
 };
@@ -608,6 +609,8 @@ server.registerTool(
   },
   async () => text(ROUTING_REFERENCE)
 );
+
+registerGuidance(server);
 
   return server;
 }

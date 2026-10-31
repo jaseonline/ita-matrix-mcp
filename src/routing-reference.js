@@ -130,6 +130,11 @@ Fare buckets (booking classes / RBDs) - the lever for premium-cabin deals:
 
 --- PRACTICAL NOTES ---
 
+Cheaper fares come from varying the ORIGIN (nearby cities and countries), not
+salesCity, which mostly sets the default currency. Premium cabins: price round
+trips as two slices; a one-way is often far dearer. get_itinerary_details gives
+booking class, fare basis and aircraft for the fares you plan to recommend.
+
 Over-constraining is the usual cause of zero results, and the usual cause of
 over-constraining is a bare carrier or airport fixing the flight count. If a
 search comes back empty, relax in this order: drop extraCodes, pad the routing
