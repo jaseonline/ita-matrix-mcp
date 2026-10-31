@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/client";
 
-import { createServer } from "../src/create-server.js";
+import { createNodeServer } from "../src/node-runtime.js";
 
 const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
 const manifest = readJson("../mcp.json");
@@ -18,7 +18,7 @@ const pkg = readJson("../package.json");
 
 test("mcp.json tools, prompts and resources match what the server registers", async () => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const server = createServer();
+  const server = createNodeServer();
   const client = new Client({ name: "manifest-test", version: "1.0.0" });
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
 

@@ -23,6 +23,10 @@ All notable changes to this project are recorded here. The format follows
   deployment hardening.
 - The `salesCity` description no longer claims it finds cheaper pricing, and the Node routing reference now carries the
   same origin and premium-cabin notes as the Worker's.
+- The Node server and the Worker now share one code base in `src/`, on MCP SDK v2. Only `src/node-runtime.js`,
+  `src/server.js`, `src/http-server.js` and `cloudflare/src/` differ by runtime. Node Search IDs now take the Worker's
+  `s-` plus 12 hex digits form, a cached API key is trusted until Matrix rejects it, and both servers report the same
+  server metadata.
 
 ### Security
 

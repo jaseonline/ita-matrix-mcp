@@ -7,11 +7,10 @@
  * expressible.
  */
 
-import { randomBytes } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { MatrixClient, buildSlice, MatrixError } from "./matrix-client.js";
+import { buildSlice, MatrixError } from "./matrix-client.js";
 import {
   normalizeSolution,
   sortSolutions,
@@ -25,55 +24,21 @@ import { ROUTING_REFERENCE } from "./routing-reference.js";
 import { registerGuidance } from "./guidance.js";
 import { flatten, buildLinks, agentBrief, displayPrice } from "./handoff.js";
 
-const client = new MatrixClient({
-  timeoutMs: Number(process.env.ITA_MATRIX_TIMEOUT_MS) || 150000,
-});
-
-/**
- * Searches are expensive (20–60s), and detail lookups need the session and
- * solutionSet from the originating search. Hold recent searches so
- * get_itinerary_details is a cheap follow-up instead of a full re-run.
- *
- * Deliberately module-scoped, NOT per-server. An HTTP MCP session is far
- * shorter-lived than the user's train of thought: it is swept after 30 minutes
- * idle, and any reconnect (new conversation, dropped stream, client restart)
- * opens a fresh one. When the cache lived inside createServer(), every one of
- * those events silently emptied it, and get_itinerary_details answered
- * "Unknown Search ID" for an ID the model had just been handed. Scoping the
- * cache to the process decouples it from session churn.
- *
- * Because IDs now outlive the session that minted them, they carry a random
- * suffix: unguessable, so one client still cannot read another's results.
- */
-const searches = new Map();
-const MAX_CACHED = 50;
-const SEARCH_TTL_MS = 6 * 60 * 60 * 1000;
-let searchSeq = 0;
-
-function pruneSearches() {
-  const cutoff = Date.now() - SEARCH_TTL_MS;
-  for (const [id, e] of searches) {
-    if (e.createdAt < cutoff) searches.delete(id);
-  }
-  // Map iterates in insertion order, so this drops the oldest first.
-  while (searches.size > MAX_CACHED) searches.delete(searches.keys().next().value);
-}
-
-function remember(entry) {
-  const id = `s${++searchSeq}-${randomBytes(3).toString("hex")}`;
-  searches.set(id, { ...entry, createdAt: Date.now() });
-  pruneSearches();
-  return id;
-}
-
 /** Flight numbers flown, in order — stable across re-runs of the same search. */
 const signature = (sol) => sol.slices.map((s) => s.flights.join(">")).join("|");
 
 /**
- * Build a fully-wired MCP server. Called once per stdio process, and once per
- * HTTP session.
+ * Build a fully-wired MCP server. Shared by the Node server and the Worker, so
+ * this file and everything it imports must stay runtime-neutral: no node:
+ * imports and no process.env. A test enforces it. What differs between runtimes
+ * is passed in; see node-runtime.js and cloudflare/src/runtime.js.
+ *
+ * @param {object} o
+ * @param {import("./matrix-client.js").MatrixClient} o.client
+ * @param {import("./store.js").SearchStore} o.store
+ * @param {object[]} [o.icons]  server icons, where the runtime can serve one
  */
-export function createServer() {
+export function createServer({ client, store, icons }) {
 
 const text = (t) => ({ content: [{ type: "text", text: t }] });
 const fail = (t) => ({ content: [{ type: "text", text: t }], isError: true });
@@ -169,7 +134,17 @@ function paxFrom(a) {
 }
 
 const server = new McpServer(
-  { name: "ita-matrix", version: "1.0.0" },
+  {
+    name: "ita-matrix",
+    version: "1.0.0",
+    title: "ITA Matrix",
+    description:
+      "Search real airfares with Google's ITA Matrix fare engine: multi-city and " +
+      "open-jaw trips, routing codes, carrier and alliance pinning, fare-bucket " +
+      "filters and ex-Europe premium-cabin fare hunting.",
+    websiteUrl: "https://matrix.itasoftware.com",
+    ...(icons ? { icons } : {}),
+  },
   {
     instructions:
       "Searches ITA Matrix (Google's fare engine behind many airline sites) " +
@@ -264,7 +239,7 @@ server.registerTool(
       }
 
       const picked = sortSolutions(dedupe(all), sort).slice(0, limit);
-      const id = remember({
+      const id = await store.remember({
         solutionSet: raw.solutionSet,
         session: raw.session,
         slices,
@@ -303,7 +278,7 @@ server.registerTool(
     inputSchema: z.object({
       searchId: z
         .string()
-        .describe('Search ID exactly as returned by search_flights, e.g. "s1-a7f2c9".'),
+        .describe('Search ID exactly as returned by search_flights, e.g. "s-a7f2c9d41b3e".'),
       rank: z
         .number()
         .int()
@@ -335,8 +310,7 @@ server.registerTool(
   },
   async ({ searchId, rank, links = true, baEdition, qfEdition, qfCurrency, aaEdition, ibEdition }) => {
     try {
-      pruneSearches();
-      const entry = searches.get(searchId);
+      const entry = await store.get(searchId);
       if (!entry) {
         return fail(
           `Unknown Search ID "${searchId}" — it has expired or was never issued ` +
@@ -396,6 +370,7 @@ server.registerTool(
         entry.solutionSet = fresh.solutionSet;
         entry.session = fresh.session;
         target.id = match.id;
+        await store.update(searchId, entry);
         raw = await client.detail({
           ...detailArgs,
           solutionSet: fresh.solutionSet,

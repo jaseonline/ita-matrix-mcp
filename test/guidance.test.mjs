@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/client";
 
-import { createServer } from "../src/create-server.js";
+import { createNodeServer } from "../src/node-runtime.js";
 import { ROUTING_REFERENCE } from "../src/routing-reference.js";
 
 const client = new Client({ name: "guidance-test", version: "1.0.0" });
@@ -17,7 +17,7 @@ const promptText = async (name, args) =>
 
 before(async () => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  await Promise.all([createServer().connect(serverSide), client.connect(clientSide)]);
+  await Promise.all([createNodeServer().connect(serverSide), client.connect(clientSide)]);
 });
 
 after(() => client.close());

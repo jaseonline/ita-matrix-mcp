@@ -6,9 +6,10 @@
  * get_itinerary_details a cheap follow-up instead of a full re-run.
  *
  * A Worker is stateless between requests (and each request may land in a
- * different isolate), so entries live in Workers KV with a 6 hour TTL. With no
- * KV binding the store falls back to a per-isolate Map, which keeps local
- * tests working but will lose entries whenever the isolate is recycled.
+ * different isolate), so there entries live in Workers KV with a 6 hour TTL.
+ * With no KV the store uses a module-level Map: that is how the Node server
+ * runs, where it lasts as long as the process. On a Worker it would be lost
+ * whenever the isolate is recycled.
  *
  * IDs outlive any one connection, so they carry a random suffix: unguessable,
  * so one client cannot read another's results.
@@ -16,9 +17,19 @@
 
 const PREFIX = "search:";
 const TTL_SECONDS = 6 * 60 * 60;
+const MAX_IN_MEMORY = 50;
 
 // Isolate-local fallback. Module scope on purpose.
 const memory = new Map();
+
+function pruneMemory() {
+  const cutoff = Date.now() - TTL_SECONDS * 1000;
+  for (const [id, e] of memory) {
+    if (e.createdAt < cutoff) memory.delete(id);
+  }
+  // Map iterates in insertion order, so this drops the oldest first.
+  while (memory.size > MAX_IN_MEMORY) memory.delete(memory.keys().next().value);
+}
 
 const hex = (bytes) =>
   [...crypto.getRandomValues(new Uint8Array(bytes))]
@@ -26,8 +37,8 @@ const hex = (bytes) =>
     .join("");
 
 export class SearchStore {
-  /** @param {KVNamespace|null} kv */
-  constructor(kv) {
+  /** @param {KVNamespace|null} [kv] */
+  constructor(kv = null) {
     this._kv = kv;
   }
 
@@ -42,13 +53,8 @@ export class SearchStore {
   async get(id) {
     if (typeof id !== "string" || !/^s-[0-9a-f]{12}$/.test(id)) return null;
     if (!this._kv) {
-      const e = memory.get(id);
-      if (!e) return null;
-      if (Date.now() - e.createdAt > TTL_SECONDS * 1000) {
-        memory.delete(id);
-        return null;
-      }
-      return e;
+      pruneMemory();
+      return memory.get(id) ?? null;
     }
     return (await this._kv.get(PREFIX + id, "json")) ?? null;
   }
@@ -64,6 +70,7 @@ export class SearchStore {
     const ttl = Math.max(60, TTL_SECONDS - age);
     if (!this._kv) {
       memory.set(id, entry);
+      pruneMemory();
       return;
     }
     await this._kv.put(PREFIX + id, JSON.stringify(entry), { expirationTtl: ttl });

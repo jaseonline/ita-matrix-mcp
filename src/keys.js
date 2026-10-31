@@ -6,24 +6,28 @@
  * the only source, because Google rotates these.
  *
  * Resolution order:
- *   1. $ITA_MATRIX_API_KEY
- *   2. on-disk cache (30 day TTL)
+ *   1. a pinned key (ITA_MATRIX_API_KEY), if set
+ *   2. the cache (30 day TTL). Trusted without a probe: if Google has
+ *      rotated the key, the API rejects it and MatrixClient calls invalidate(),
+ *      which clears the cache and re-resolves.
  *   3. known-good seeds, tried in order
  *   4. live discovery: homepage -> alkali bundle -> every AIza... candidate,
  *      each validated against a cheap endpoint
  *
- * Note the bundle contains ~7 AIza keys and only 2 are authorized for the
- * Matrix API, so "first regex match" is not good enough — candidates must be
- * validated before use.
+ * The bundle contains ~7 AIza keys and only 2 are authorised for the Matrix
+ * API, so "first regex match" is not good enough: candidates must be validated
+ * before use.
+ *
+ * The cache is passed in, because it differs by runtime: a file on Node and KV
+ * on Workers. It has read(), write(key) and clear(), which must not throw. With
+ * no cache the key is simply held in memory.
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import path from "node:path";
-
 const KEY_RE = /AIza[0-9A-Za-z_-]{35}/g;
-const TTL_MS = 30 * 24 * 3600 * 1000;
 const HOME = "https://matrix.itasoftware.com/";
+const UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
 
 // Verified working as of the last protocol check. Used before falling back to
 // a full bundle scrape, which costs a ~2 MB download.
@@ -32,47 +36,17 @@ const SEEDS = [
   "AIzaSyA-9pyRbyL7NFyQLAFM7bjEXdUHEZv6RRo",
 ];
 
-function cacheFile() {
-  const base =
-    process.env.ITA_MATRIX_CACHE_DIR ||
-    path.join(homedir(), ".cache", "ita-matrix-mcp");
-  return path.join(base, "api-key.json");
-}
-
-async function readCache() {
-  try {
-    const raw = JSON.parse(await readFile(cacheFile(), "utf8"));
-    if (!raw?.key || typeof raw.key !== "string") return null;
-    if (Date.now() - (raw.ts || 0) > TTL_MS) return null;
-    return raw.key;
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(key) {
-  try {
-    const f = cacheFile();
-    await mkdir(path.dirname(f), { recursive: true });
-    await writeFile(f, JSON.stringify({ key, ts: Date.now() }), "utf8");
-  } catch {
-    /* cache is an optimization; ignore failures */
-  }
-}
-
 /** Pull every AIza-shaped candidate out of the homepage and its alkali bundle. */
-async function discoverCandidates(fetchImpl = fetch) {
+async function discoverCandidates(fetchImpl) {
   const out = [];
-  const res = await fetchImpl(HOME);
+  const res = await fetchImpl(HOME, { headers: { "User-Agent": UA } });
   const html = await res.text();
   out.push(...(html.match(KEY_RE) || []));
 
   // The key actually lives in the Alkali bundle referenced by the page.
-  for (const m of html.matchAll(
-    /src="(\/\/www\.gstatic\.com\/alkali\/[^"]+\.js)"/g
-  )) {
+  for (const m of html.matchAll(/src="(\/\/www\.gstatic\.com\/alkali\/[^"]+\.js)"/g)) {
     try {
-      const bundle = await fetchImpl("https:" + m[1]);
+      const bundle = await fetchImpl("https:" + m[1], { headers: { "User-Agent": UA } });
       out.push(...((await bundle.text()).match(KEY_RE) || []));
     } catch {
       /* try the next bundle */
@@ -82,7 +56,16 @@ async function discoverCandidates(fetchImpl = fetch) {
 }
 
 export class KeyProvider {
-  constructor({ validate, fetchImpl = fetch } = {}) {
+  /**
+   * @param {object} o
+   * @param {{read: Function, write: Function, clear: Function}|null} [o.cache]
+   * @param {string|null} [o.apiKey]  pinned key, skips all discovery
+   * @param {(key: string) => Promise<boolean>} [o.validate]
+   * @param {typeof fetch} o.fetchImpl  must already be bound (see MatrixClient)
+   */
+  constructor({ cache = null, apiKey = null, validate, fetchImpl }) {
+    this._cache = cache;
+    this._pinned = apiKey?.trim() || null;
     this._validate = validate; // async (key) => boolean
     this._fetch = fetchImpl;
     this._key = null;
@@ -101,31 +84,28 @@ export class KeyProvider {
   /** Called after the API rejects a key, so the next get() re-resolves. */
   async invalidate() {
     this._key = null;
-    await writeCache("");
+    if (this._pinned) return; // a pinned key is the operator's call
+    await this._cache?.clear();
   }
 
   async _resolve() {
-    const env = process.env.ITA_MATRIX_API_KEY?.trim();
-    if (env) return (this._key = env);
+    if (this._pinned) return (this._key = this._pinned);
 
-    const cached = await readCache();
-    const candidates = [
-      ...(cached ? [cached] : []),
-      ...SEEDS,
-    ];
+    const cached = await this._cache?.read();
+    if (cached) return (this._key = cached);
 
-    for (const k of candidates) {
+    for (const k of SEEDS) {
       if (await this._ok(k)) {
-        await writeCache(k);
+        await this._cache?.write(k);
         return (this._key = k);
       }
     }
 
-    // Everything known is stale — scrape the live bundle.
+    // Everything known is stale: scrape the live bundle.
     for (const k of await discoverCandidates(this._fetch)) {
-      if (candidates.includes(k)) continue;
+      if (SEEDS.includes(k)) continue;
       if (await this._ok(k)) {
-        await writeCache(k);
+        await this._cache?.write(k);
         return (this._key = k);
       }
     }

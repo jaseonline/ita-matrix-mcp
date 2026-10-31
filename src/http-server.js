@@ -20,7 +20,7 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
-import { createServer } from "./create-server.js";
+import { createNodeServer } from "./node-runtime.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -143,7 +143,7 @@ const httpServer = http.createServer(async (req, res) => {
       return rpcError(res, -32000, "Missing Mcp-Session-Id; send initialize first.", 400);
     }
 
-    const server = createServer();
+    const server = createNodeServer();
     const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {

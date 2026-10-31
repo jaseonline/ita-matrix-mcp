@@ -5,9 +5,9 @@
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { createServer } from "./create-server.js";
+import { createNodeServer } from "./node-runtime.js";
 
-const server = createServer();
+const server = createNodeServer();
 await server.connect(new StdioServerTransport());
 // stdout is the MCP channel — anything informational must go to stderr.
 process.stderr.write("ita-matrix MCP server ready (stdio)\n");
