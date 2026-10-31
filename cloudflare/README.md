@@ -5,19 +5,15 @@ The same five tools as the Node server (`search_flights`, `get_itinerary_details
 as a stateless Streamable HTTP MCP endpoint from a Worker, so Claude on the web
 and mobile can use it without your PC being on.
 
-`format.js`, `handoff.js`, `routing-reference.js` and `matrix-client.js` are the
-repo's own modules (the client has two small changes, below). What is new:
+This folder only holds what is specific to Workers. The server itself is the
+shared code in [`../src`](../src), which the Worker bundles, so **deploy from a
+full checkout**. Only this folder needs `npm install`: `wrangler.jsonc` aliases
+the SDK and zod to `cloudflare/node_modules`.
 
 | File | Role |
 |---|---|
 | `src/index.js` | Entry point. Mounts MCP at `/mcp/<secret>`; fails closed with no secret. |
-| `src/create-server.js` | The repo's tool definitions, as a per-request factory using SDK v2 schemas. |
-| `src/keys.js` | API-key discovery, cached in KV for 30 days instead of on disk. |
-| `src/store.js` | Search results in KV for 6 hours (falls back to memory with no KV). |
-
-Changes to `matrix-client.js`: it accepts `kv` / `apiKey`, and its default
-`fetch` is wrapped, because calling a stored bare `fetch` as a method throws
-"Illegal invocation" on Workers.
+| `src/runtime.js` | Wires the shared server to Worker bindings: KV for the API key (30 days) and searches (6 hours). |
 
 ## Deploy
 
@@ -45,7 +41,6 @@ copy .dev.vars.example .dev.vars   # then edit the secret
 npx wrangler dev --port 8799       # terminal 1
 node test/local.mjs                # terminal 2: protocol checks, no upstream calls
 $env:LIVE=1; node test/local.mjs   # real Matrix searches (about 3 minutes)
-node --test test/handoff.test.mjs  # offline unit tests for the hand-over links
 ```
 
 Against a deployed Worker: `BASE=https://... SECRET=... node test/local.mjs`.

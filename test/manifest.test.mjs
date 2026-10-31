@@ -7,27 +7,32 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/client";
 
-import { createServer } from "../src/create-server.js";
+import { createNodeServer } from "../src/node-runtime.js";
 
 const readJson = (rel) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
 const manifest = readJson("../mcp.json");
 const pkg = readJson("../package.json");
 
-test("mcp.json tools match the tools the server registers", async () => {
+test("mcp.json tools, prompts and resources match what the server registers", async () => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const server = createServer();
+  const server = createNodeServer();
   const client = new Client({ name: "manifest-test", version: "1.0.0" });
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
 
   const { tools } = await client.listTools();
+  const { prompts } = await client.listPrompts();
+  const { resources } = await client.listResources();
   await client.close();
 
   const registered = tools.map((t) => t.name).sort();
   const declared = manifest.tools.map((t) => t.name).sort();
   assert.deepEqual(declared, registered);
+
+  assert.deepEqual(manifest.prompts.map((p) => p.name).sort(), prompts.map((p) => p.name).sort());
+  assert.deepEqual(manifest.resources.map((r) => r.uri).sort(), resources.map((r) => r.uri).sort());
 });
 
 test("mcp.json version matches package.json", () => {

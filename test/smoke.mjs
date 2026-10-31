@@ -7,8 +7,8 @@
  */
 
 import { spawn } from "node:child_process";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 const LIVE = process.env.ITA_MATRIX_LIVE === "1";
 let failures = 0;
@@ -80,6 +80,17 @@ check(
   "unknown search id is handled",
   unknown.isError === true && /Unknown Search ID/.test(unknown.content?.[0]?.text || "")
 );
+// Search IDs are the only thing keeping one client out of another's results.
+check(
+  "unknown search id error does not list other IDs",
+  !/Known IDs/.test(unknown.content?.[0]?.text || "")
+);
+
+const { prompts } = await client.listPrompts();
+check("prompts are listed", prompts.some((p) => p.name === "plan_trip"), `${prompts.length} prompts`);
+
+const guide = await client.readResource({ uri: "ita://guides/fare-strategy" });
+check("fare strategy resource reads", /Search order/.test(guide.contents?.[0]?.text || ""));
 
 if (LIVE) {
   console.log("\n--- live ---");

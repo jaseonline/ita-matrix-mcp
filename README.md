@@ -35,6 +35,24 @@ arguments are in [`examples/`](examples/).
 | `lookup_airport` | Resolves place names to IATA codes, including metro codes. |
 | `routing_language_reference` | The routing-code cheat sheet, so Claude can compose non-trivial codes. |
 
+### Prompts and resources
+
+Prompts are ready-made workflows, shown as slash commands or menu items in clients that support them. They are neutral
+by default: home airports, currency and cabin are arguments.
+
+| Prompt | What it does |
+|---|---|
+| `plan_trip` | Turns a trip in plain words into a sequence of searches, ending with the best one to three options. |
+| `hunt_premium_fare` | Looks for a cheap business or first fare by varying the origin, then narrowing by alliance and fare bucket. |
+| `explain_empty_search` | Relaxes one constraint at a time, then checks whether Matrix itself is responding. |
+
+Resources are read-only documents a client can attach to a conversation.
+
+| Resource | What it holds |
+|---|---|
+| `ita://reference/routing` | The same routing reference as the `routing_language_reference` tool. |
+| `ita://guides/fare-strategy` | Search order and tactics for finding cheaper fares. |
+
 ### Multi-city
 
 A trip is a list of legs, so every trip shape uses one tool:
@@ -115,7 +133,7 @@ minutes, and closed sessions are dropped immediately.
 The search cache is process-wide rather than per-session, because MCP sessions
 are much shorter-lived than a user's train of thought — a reconnect or a
 30-minute pause would otherwise throw away results the model was still holding a
-Search ID for. IDs carry a random suffix (`s3-a7f2c9`) so they stay unguessable
+Search ID for. IDs are random (`s-a7f2c9d41b3e`) so they stay unguessable
 between clients, and entries expire after 6 hours. If Matrix's own pricing
 session expires first, `get_itinerary_details` re-runs the original search and
 re-locates the itinerary by flight number rather than failing.
@@ -182,7 +200,7 @@ Live tests hit the real service and take 20–60s per search.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks pull requests go through, and
 [CHANGELOG.md](CHANGELOG.md) for release notes. `mcp.json` is a machine-readable summary of the transports,
-environment variables and tools.
+environment variables, tools, prompts and resources.
 
 ## Licence
 

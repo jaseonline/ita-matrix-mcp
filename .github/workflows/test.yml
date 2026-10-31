@@ -1,0 +1,44 @@
+# .github/workflows/test.yml
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Offline: never set ITA_MATRIX_LIVE here, Matrix's rate limits are undocumented.
+      - run: npm test
+      - run: node test/http-smoke.mjs
+
+  worker:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: cloudflare
+    env:
+      SECRET: ci-only-not-a-real-secret
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - run: npm ci
+      - name: Start the Worker locally
+        run: |
+          npx wrangler dev --port 8799 --var "ITA_MATRIX_SECRET_PATH:$SECRET" &
+          for attempt in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8799/health && exit 0
+            sleep 1
+          done
+          echo "Worker did not start" >&2
+          exit 1
+      - run: node test/local.mjs

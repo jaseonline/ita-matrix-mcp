@@ -14,7 +14,7 @@
  */
 
 import { createMcpHandler } from "agents/mcp/server";
-import { createServer } from "./create-server.js";
+import { createWorkerServer } from "./runtime.js";
 
 const text = (body, status) =>
   new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -47,6 +47,6 @@ export default {
       .filter(Boolean);
     if (hosts.length) options.allowedHostnames = hosts;
 
-    return createMcpHandler(() => createServer(env, url.origin), options)(request, env, ctx);
+    return createMcpHandler(() => createWorkerServer(env, url.origin), options)(request, env, ctx);
   },
 };

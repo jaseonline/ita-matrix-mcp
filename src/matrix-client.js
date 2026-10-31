@@ -135,10 +135,26 @@ export function buildSlice({
 }
 
 export class MatrixClient {
-  constructor({ timeoutMs = 150000, fetchImpl = fetch } = {}) {
+  /**
+   * @param {object} [o]
+   * @param {number} [o.timeoutMs]
+   * @param {object|null} [o.keyCache]  caches the discovered API key; see keys.js
+   * @param {string|null} [o.apiKey]    pin the upstream key, skipping discovery
+   * @param {typeof fetch} [o.fetchImpl]
+   */
+  constructor({
+    timeoutMs = 150000,
+    keyCache = null,
+    apiKey = null,
+    // Wrapped on purpose: storing the bare global and calling it as a method
+    // (this._fetch(...)) throws "Illegal invocation" on Workers.
+    fetchImpl = (...args) => fetch(...args),
+  } = {}) {
     this._timeout = timeoutMs;
     this._fetch = fetchImpl;
     this._keys = new KeyProvider({
+      cache: keyCache,
+      apiKey,
       fetchImpl,
       validate: (key) => this._probeKey(key),
     });

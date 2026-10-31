@@ -23,18 +23,28 @@ npm run test:live
 
 Matrix's rate limits are undocumented, so please do not add live tests to CI.
 
+## Layout
+
+`src/` holds one server shared by two runtimes. `src/node-runtime.js`, `src/server.js` and `src/http-server.js` are
+Node only, and `cloudflare/src/` is Worker only. Everything else in `src/` must stay runtime-neutral, with no `node:`
+imports and no `process.env`; `npm test` enforces it. Pass anything that differs in from the runtime files. The Worker
+bundles `../src`, so deploy it from a full checkout; it needs `npm install` in `cloudflare/`, not in the root. Keep
+`@modelcontextprotocol/server` at the same exact version in both `package.json` files; `npm test` checks that too.
+
 ## Making a change
 
-1. Branch from `master`; it is protected, so changes go through a pull request.
+1. Branch from `main`; it is protected, so changes go through a pull request.
 2. Keep changes focused, and add or update a test where behaviour changes.
 3. If you add, rename or remove a tool, update `mcp.json` and the tool table in `README.md`. `test/manifest.test.mjs`
    fails when `mcp.json` and the registered tools disagree.
 4. If you change an environment variable, update `.env.example`, the table in `README.md` and `mcp.json`.
-5. Add a line under `[Unreleased]` in `CHANGELOG.md`.
+5. Prompts and resources live in `src/guidance.js`. List new ones in `mcp.json`; `npm test` fails if it disagrees.
+6. Add a line under `[Unreleased]` in `CHANGELOG.md`.
 
 ## Checks that run on pull requests
 
 - **Lint Code Base**: super-linter over any changed GitHub Actions workflows.
+- **Tests**: `npm test`, plus the Worker's protocol checks against `wrangler dev`.
 - **mcp-grade**: static grading of the repository as an MCP server; the build fails below grade C.
 
 ## Security
