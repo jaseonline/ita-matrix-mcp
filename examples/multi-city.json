@@ -1,0 +1,8 @@
+{
+  "slices": [
+    { "origin": "JFK", "destination": "HND", "date": "2026-10-15" },
+    { "origin": "HND", "destination": "SIN", "date": "2026-10-22" },
+    { "origin": "SIN", "destination": "JFK", "date": "2026-10-30", "routing": "AA+ LHR AA+" }
+  ],
+  "cabin": "BUSINESS"
+}

@@ -1,0 +1,19 @@
+{
+  "slices": [
+    {
+      "origin": "JFK",
+      "destination": "LHR",
+      "date": "2026-11-12",
+      "extraCodes": "alliance star-alliance; maxconnect 240"
+    },
+    {
+      "origin": "CDG",
+      "destination": "JFK",
+      "date": "2026-11-20",
+      "routing": "F? LHR F?"
+    }
+  ],
+  "cabin": "PREMIUM_COACH",
+  "sort": "price",
+  "limit": 5
+}
