@@ -321,8 +321,7 @@ server.registerTool(
       if (!entry) {
         return fail(
           `Unknown Search ID "${searchId}" — it has expired or was never issued ` +
-            `(results are kept for 6 hours). Known IDs: ` +
-            `${(await store.ids()).join(", ") || "none"}. ` +
+            `(results are kept for 6 hours). ` +
             `Re-run search_flights and use the ID it returns.`
         );
       }

@@ -20,6 +20,11 @@ All notable changes to this project are recorded here. The format follows
 - `SECURITY.md` replaced the GitHub template with a real policy: supported versions, private reporting, scope and
   deployment hardening.
 
+### Security
+
+- The "Unknown Search ID" error no longer lists cached Search IDs, which let any client on a shared instance find and
+  read another client's results.
+
 ## [1.0.0]
 
 ### Added

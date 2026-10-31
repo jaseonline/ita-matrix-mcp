@@ -58,13 +58,6 @@ export class SearchStore {
     await this._put(id, entry);
   }
 
-  /** A few known IDs, newest first where the backend allows, for error text. */
-  async ids(limit = 10) {
-    if (!this._kv) return [...memory.keys()].slice(-limit).reverse();
-    const { keys } = await this._kv.list({ prefix: PREFIX, limit });
-    return keys.map((k) => k.name.slice(PREFIX.length));
-  }
-
   async _put(id, entry) {
     const age = Math.max(0, Math.floor((Date.now() - (entry.createdAt || Date.now())) / 1000));
     // KV needs a TTL of at least 60s; keep the original expiry on updates.

@@ -80,6 +80,11 @@ check(
   "unknown search id is handled",
   unknown.isError === true && /Unknown Search ID/.test(unknown.content?.[0]?.text || "")
 );
+// Search IDs are the only thing keeping one client out of another's results.
+check(
+  "unknown search id error does not list other IDs",
+  !/Known IDs/.test(unknown.content?.[0]?.text || "")
+);
 
 if (LIVE) {
   console.log("\n--- live ---");

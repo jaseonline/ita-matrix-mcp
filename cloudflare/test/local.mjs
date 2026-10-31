@@ -90,6 +90,7 @@ ok(r.msg?.result?.isError === true && /YYYY-MM-DD/.test(textOf(r)), "search_flig
 
 r = await call("get_itinerary_details", { searchId: "s-000000000000", rank: 1 });
 ok(r.msg?.result?.isError === true && /Unknown Search ID/.test(textOf(r)), "get_itinerary_details: unknown ID handled");
+ok(!/Known IDs/.test(textOf(r)), "unknown ID error does not list other IDs");
 
 // --- live tools ----------------------------------------------------------------
 if (LIVE) {
