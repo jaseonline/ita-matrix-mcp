@@ -1,6 +1,8 @@
 # .github/workflows/mcp-grade.yml
 name: mcp-grade
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   scan:
     runs-on: ubuntu-26.04

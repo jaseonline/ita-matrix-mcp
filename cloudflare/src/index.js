@@ -14,6 +14,7 @@
  */
 
 import { createMcpHandler } from "agents/mcp/server";
+import { trimSlashes } from "../../src/secret-path.js";
 import { createWorkerServer } from "./runtime.js";
 
 const text = (body, status) =>
@@ -26,7 +27,7 @@ export default {
     // Liveness probe. Deliberately reveals nothing about the MCP path.
     if (url.pathname === "/health") return Response.json({ status: "ok" });
 
-    const secret = String(env.ITA_MATRIX_SECRET_PATH || "").replace(/^\/+|\/+$/g, "");
+    const secret = trimSlashes(env.ITA_MATRIX_SECRET_PATH);
     if (!secret) {
       return text(
         "Not configured: set the ITA_MATRIX_SECRET_PATH secret (wrangler secret put ITA_MATRIX_SECRET_PATH).",
