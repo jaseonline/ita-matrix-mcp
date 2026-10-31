@@ -35,7 +35,7 @@ jobs:
       - name: Start the Worker locally
         run: |
           npx wrangler dev --port 8799 --var "ITA_MATRIX_SECRET_PATH:$SECRET" &
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             curl -sf http://127.0.0.1:8799/health && exit 0
             sleep 1
           done
