@@ -8,7 +8,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { MatrixClient, buildSlice, MatrixError } from "./matrix-client.js";
@@ -195,7 +195,7 @@ server.registerTool(
       "connection city, or require a specific number of flights per leg. " +
       "Expect 20-60s. Returns ranked itineraries and a Search ID for " +
       "get_itinerary_details.",
-    inputSchema: {
+    inputSchema: z.object({
       slices: z
         .array(sliceSchema)
         .min(1)
@@ -216,7 +216,7 @@ server.registerTool(
         .optional()
         .describe("How many itineraries to return. Default 10."),
       ...commonSchema,
-    },
+    }),
   },
   async (a) => {
     try {
@@ -300,7 +300,7 @@ server.registerTool(
       "aircraft type. Reuses the earlier search session, so it is normally " +
       "fast; if that session has expired upstream it silently re-runs the " +
       "original search, which takes as long as the search did.",
-    inputSchema: {
+    inputSchema: z.object({
       searchId: z
         .string()
         .describe('Search ID exactly as returned by search_flights, e.g. "s1-a7f2c9".'),
@@ -331,7 +331,7 @@ server.registerTool(
         .string()
         .optional()
         .describe('Iberia site edition as "<language>-<country>", e.g. "en-GB". Default "en-GB".'),
-    },
+    }),
   },
   async ({ searchId, rank, links = true, baEdition, qfEdition, qfCurrency, aaEdition, ibEdition }) => {
     try {
@@ -445,7 +445,7 @@ server.registerTool(
       "to find when to fly. Runs one search per date, so keep ranges modest " +
       "(a 14-day scan takes several minutes). For a single date with " +
       "±flexibility, use search_flights with flexDays instead.",
-    inputSchema: {
+    inputSchema: z.object({
       origin: z.string(),
       destination: z.string(),
       startDate: z.string().describe("First departure date, YYYY-MM-DD."),
@@ -466,7 +466,7 @@ server.registerTool(
         .optional()
         .describe("Cap on dates to probe. Default 10."),
       ...commonSchema,
-    },
+    }),
   },
   async (a) => {
     try {
@@ -588,10 +588,10 @@ server.registerTool(
       "Resolve a partial city or airport name to IATA codes. Use this when " +
       "the user names a place rather than a code, or to find the metro code " +
       "that covers every airport in a city.",
-    inputSchema: {
+    inputSchema: z.object({
       query: z.string().describe('Partial name or code, e.g. "milan", "JFK".'),
       limit: z.number().int().min(1).max(25).optional(),
-    },
+    }),
   },
   async ({ query, limit }) => {
     try {
@@ -622,7 +622,7 @@ server.registerTool(
       "pinning, forced connection points, alliances, exclusions, stop counts, " +
       "and fare-bucket filters. Read this before composing a non-trivial " +
       "routing code.",
-    inputSchema: {},
+    inputSchema: z.object({}),
   },
   async () => text(ROUTING_REFERENCE)
 );

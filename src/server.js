@@ -4,7 +4,7 @@
  * claude_desktop_config.json. The HTTP entrypoint is http-server.js.
  */
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { createServer } from "./create-server.js";
 
 const server = createServer();

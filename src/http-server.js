@@ -19,7 +19,7 @@
 
 import http from "node:http";
 import { randomUUID } from "node:crypto";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { createServer } from "./create-server.js";
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -144,7 +144,7 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     const server = createServer();
-    const transport = new StreamableHTTPServerTransport({
+    const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
         sessions.set(id, { transport, server, lastSeen: Date.now() });
