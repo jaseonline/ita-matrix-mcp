@@ -3,8 +3,8 @@
  *
  * Usage (from the repository root, after `npm install`):
  *
- *   node examples/stdio-client.mjs                          # offline: list tools, print the routing reference
- *   node examples/stdio-client.mjs JFK LHR 2026-12-01       # live: one-way search, top 3 by price (20-60s)
+ *   node src/offline/stdio-client.mjs                          # offline: list tools, print the routing reference
+ *   node src/offline/stdio-client.mjs JFK LHR 2026-12-01       # live: one-way search, top 3 by price (20-60s)
  *
  * The offline mode needs no network access and is a quick way to confirm the server starts and registers its tools.
  */

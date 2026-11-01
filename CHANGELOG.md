@@ -11,7 +11,7 @@ All notable changes to this project are recorded here. The format follows
 - `mcp.json` manifest describing the transports, environment variables and tools, with a test that keeps it in step
   with the tools the server actually registers.
 - `.env.example` documenting every environment variable.
-- `examples/`: a runnable stdio client and sample `search_flights` arguments.
+- `src/offline/`: a runnable stdio client and sample `search_flights` arguments.
 - `CONTRIBUTING.md` and this changelog.
 - MCP prompts (`plan_trip`, `hunt_premium_fare`, `explain_empty_search`) and resources (`ita://reference/routing`,
   `ita://guides/fare-strategy`) on both the Node server and the Cloudflare Worker.

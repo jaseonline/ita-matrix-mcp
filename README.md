@@ -1,16 +1,10 @@
 <img src="https://socialify.dev/jaseonline/ita-matrix-mcp/image?custom_description=%F0%9F%9B%AB+Breathing+new+life+into+an+old+tool.+An+ITA+Matrix+MCP+server+to+optimise+airfare+searches.+multi-city+trips+and+ITA+routing+language%2C+over+STDIO+or+Streamable+HTTP.&description=1&font=Jost&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fjaseonline%2Fita-matrix-mcp%2F949385637ea426615d72f498df8205bf3f25927c%2Fcloudflare%2Fsrc%2Fassets%2Fita-software-logo-svg-vector.svg&name=1&owner=1&pattern=Solid&pulls=1&stargazers=1&theme=Auto" >
 
-An MCP server that searches [ITA Matrix](https://matrix.itasoftware.com) —
-Google's fare engine, the one behind a lot of airline and OTA search — so Claude
-can plan genuinely complex itineraries.
+An MCP server that searches [ITA Matrix](https://matrix.itasoftware.com) — Google's fare engine, the one behind a lot of airline and OTA search — so Claude can plan genuinely complex itineraries.
 
-The point of using Matrix over an ordinary flight search is two things it has
-that consumer sites don't: **arbitrary multi-city trips** and **ITA's routing
-language**, which lets you constrain each leg by carrier, connection point,
-alliance, or flight count.
+The point of using Matrix over an ordinary flight search is two things it has that consumer sites don't: **arbitrary multi-city trips** and **ITA's routing language**, which lets you constrain each leg by carrier, connection point, alliance, or flight count.
 
-Results are real, priced, availability-checked fares. They are not bookable
-here — take the flight numbers to the airline or an OTA to ticket them.
+Results are real, priced, availability-checked fares. They are not bookable here — take the flight numbers to the airline or an OTA to ticket them.
 
 ## Quickstart
 
@@ -18,12 +12,70 @@ here — take the flight numbers to the airline or an OTA to ticket them.
 git clone https://github.com/jaseonline/ita-matrix-mcp.git
 cd ita-matrix-mcp
 npm install
-node examples/stdio-client.mjs                      # offline check: lists the tools
-node examples/stdio-client.mjs JFK LHR 2026-12-01   # live one-way search (20-60s)
+node src/offline/stdio-client.mjs                      # offline check: lists the tools
 ```
 
-Then connect it to Claude as described under [Running it](#running-it). Sample `search_flights`
-arguments are in [`examples/`](examples/).
+Then connect it to Claude as described under [Configuration](#configuration). Sample `search_flights` arguments are in [`src/offline/`](src/offline/).
+
+### Examples
+
+[`stdio-client.mjs`](src/offline/stdio-client.mjs) is a runnable MCP client. Offline by default (lists tools, prints the routing reference); pass `ORIGIN DEST YYYY-MM-DD` for a live one-way search.
+
+```bash
+node src/offline/stdio-client.mjs JFK LHR 2026-12-01   # live one-way search (20-60s)
+```
+---
+[`multi-city.json`](src/offline/multi-city.json) `search_flights` arguments for a three-leg trip, with a per-leg routing code on the last leg. A trip is a list of legs, so every trip shape uses one tool:
+
+```json
+{
+  "slices": [
+    { "origin": "JFK", "destination": "HND", "date": "2026-10-15" },
+    { "origin": "HND", "destination": "SIN", "date": "2026-10-22" },
+    { "origin": "SIN", "destination": "JFK", "date": "2026-10-30", "routing": "AA+ LHR AA+" }
+  ],
+  "cabin": "BUSINESS"
+}
+```
+---
+[`open-jaw-star-alliance.json`](src/offline/open-jaw-star-alliance.json) An open-jaw trip using extension codes (`alliance`, `maxconnect`) and padded routing (`F? LHR F?`).
+
+```json
+{
+  "slices": [
+    {
+      "origin": "JFK",
+      "destination": "LHR",
+      "date": "2026-11-12",
+      "extraCodes": "alliance star-alliance; maxconnect 240"
+    },
+    {
+      "origin": "CDG",
+      "destination": "JFK",
+      "date": "2026-11-20",
+      "routing": "F? LHR F?"
+    }
+  ],
+  "cabin": "PREMIUM_COACH",
+  "sort": "price",
+  "limit": 5
+}
+```
+Legs need not connect — `JFK→LHR` then `CDG→JFK` is a valid open jaw.
+
+---
+
+The JSON files are the `arguments` object for the `search_flights` tool. Paste one into a Claude conversation ("search ITA Matrix with these arguments") or send it with any MCP client.
+
+### Routing codes
+
+Per-leg, and the reason this beats normal search. `AA+` = only American, `AA+ DFW AA+` = American connecting at Dallas, `F F` = exactly two flights, `~ORD` = exactly one connection, not at Chicago. Extension codes go in `extraCodes`, separated by semicolons: `maxconnect 240`, `alliance star-alliance; -overnight`, `f bc=J|C`.
+
+A bare carrier or airport fixes the flight count: `AA` means exactly one American flight and `DFW` means exactly one connection, in Dallas. Add `+`, `*`, `?` or `F?` padding (`AA+`, `F? DFW F?`, `F* AA F*`) to allow more.
+
+Call `routing_language_reference` for the full syntax.
+
+> Note: `maxStops` is *relative to the route minimum*, matching Matrix's own semantics — `0` means "no more hops than strictly necessary", which on a long-haul may still involve a connection.
 
 ## Tools
 
@@ -35,10 +87,9 @@ arguments are in [`examples/`](examples/).
 | `lookup_airport` | Resolves place names to IATA codes, including metro codes. |
 | `routing_language_reference` | The routing-code cheat sheet, so Claude can compose non-trivial codes. |
 
-### Prompts and resources
+## Prompts and resources
 
-Prompts are ready-made workflows, shown as slash commands or menu items in clients that support them. They are neutral
-by default: home airports, currency and cabin are arguments.
+Prompts are ready-made workflows, shown as slash commands or menu items in clients that support them. They are neutral by default: home airports, currency and cabin are arguments.
 
 | Prompt | What it does |
 |---|---|
@@ -53,43 +104,7 @@ Resources are read-only documents a client can attach to a conversation.
 | `ita://reference/routing` | The same routing reference as the `routing_language_reference` tool. |
 | `ita://guides/fare-strategy` | Search order and tactics for finding cheaper fares. |
 
-### Multi-city
-
-A trip is a list of legs, so every trip shape uses one tool:
-
-```jsonc
-{
-  "slices": [
-    { "origin": "JFK", "destination": "HND", "date": "2026-10-15" },
-    { "origin": "HND", "destination": "SIN", "date": "2026-10-22" },
-    { "origin": "SIN", "destination": "JFK", "date": "2026-10-30",
-      "routing": "AA+ LHR AA+" }   // last leg: American, via Heathrow
-  ],
-  "cabin": "BUSINESS"
-}
-```
-
-Legs need not connect — `JFK→LHR` then `CDG→JFK` is a valid open jaw.
-
-### Routing codes
-
-Per-leg, and the reason this beats normal search. `AA+` = only American,
-`AA+ DFW AA+` = American connecting at Dallas, `F F` = exactly two flights,
-`~ORD` = exactly one connection, not at Chicago. Extension codes go in
-`extraCodes`, separated by semicolons: `maxconnect 240`,
-`alliance star-alliance; -overnight`, `f bc=J|C`.
-
-A bare carrier or airport fixes the flight count: `AA` means exactly one
-American flight and `DFW` means exactly one connection, in Dallas. Add `+`,
-`*`, `?` or `F?` padding (`AA+`, `F? DFW F?`, `F* AA F*`) to allow more.
-
-Call `routing_language_reference` for the full syntax.
-
-> Note: `maxStops` is *relative to the route minimum*, matching Matrix's own
-> semantics — `0` means "no more hops than strictly necessary", which on a
-> long-haul may still involve a connection.
-
-## Running it
+## Configuration
 
 Two entrypoints share one server definition:
 
@@ -102,16 +117,14 @@ node src/http-server.js   # HTTP   — remote, for Claude Desktop connectors
 ### Local (stdio)
 
 ```bash
-claude mcp add ita-matrix -- node D:/path/to/ITA-Matrix-MCP/src/server.js
+claude mcp add ita-matrix -- node /path/to/ita-matrix-mcp/src/server.js
 ```
 
 ### Remote (Streamable HTTP)
 
-Claude Desktop connects to remote servers **from Anthropic's cloud, not from
-your machine**, so the server needs a public HTTPS URL with a valid
-certificate. localhost and VPN-only hosts will not work. Remote servers are
-added under **Settings → Connectors → Add custom connector**; they cannot be
-configured through `claude_desktop_config.json`.
+Claude Desktop connects to remote servers **from Anthropic's cloud, not from your machine**, so the server needs a public HTTPS URL with a valid certificate. localhost and VPN-only hosts will not work. Remote servers are added under **Settings → Connectors → Add custom connector**; they cannot be configured through `claude_desktop_config.json`.
+
+### Variables
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -122,51 +135,29 @@ configured through `claude_desktop_config.json`.
 | `ITA_MATRIX_CACHE_DIR` | `~/.cache/ita-matrix-mcp` | Where the discovered API key is cached for 30 days. |
 | `ITA_MATRIX_TIMEOUT_MS` | `150000` | Upstream timeout. Multi-city searches are slow. |
 
-A documented template is in [`.env.example`](.env.example); Node 20.6+ can load it with
-`node --env-file=.env src/http-server.js`.
+A documented template is in [`.env.example`](.env.example); Node 20.6+ can load it with `node --env-file=.env src/http-server.js`.
 
-`GET /health` returns status and active session count, for Coolify's health check.
+`GET /health` returns status and active session count.
 
-Each HTTP session gets its own server instance. Idle sessions are swept after 30
-minutes, and closed sessions are dropped immediately.
+Each HTTP session gets its own server instance. Idle sessions are swept after 30 minutes, and closed sessions are dropped immediately.
 
-The search cache is process-wide rather than per-session, because MCP sessions
-are much shorter-lived than a user's train of thought — a reconnect or a
-30-minute pause would otherwise throw away results the model was still holding a
-Search ID for. IDs are random (`s-a7f2c9d41b3e`) so they stay unguessable
-between clients, and entries expire after 6 hours. If Matrix's own pricing
-session expires first, `get_itinerary_details` re-runs the original search and
-re-locates the itinerary by flight number rather than failing.
+The search cache is process-wide rather than per-session, because MCP sessions are much shorter-lived than a user's train of thought — a reconnect or a 30-minute pause would otherwise throw away results the model was still holding a Search ID for. IDs are random (`s-a7f2c9d41b3e`) so they stay unguessable between clients, and entries expire after 6 hours. If Matrix's own pricing session expires first, `get_itinerary_details` re-runs the original search and re-locates the itinerary by flight number rather than failing.
 
 ## How it works
 
-Matrix is a Google "Alkali" app fronting the old QPX fare engine. Every call is
-a single POST to `content-alkalimatrix-pa.googleapis.com/batch`, with the real
-JSON-RPC request wrapped in a `multipart/mixed` envelope. Auth is the public API
-key that the web app ships to every visitor — no cookies, no OAuth, no bot
-token.
+Matrix is a Google "Alkali" app fronting the old QPX fare engine. Every call is a single POST to `content-alkalimatrix-pa.googleapis.com/batch`, with the real JSON-RPC request wrapped in a `multipart/mixed` envelope. Auth is the public API key that the web app ships to every visitor — no cookies, no OAuth, no bot token.
 
 - `POST /v1/search` — run a fare search
-- `POST /v1/summarize` — expand one solution (RBDs, aircraft), reusing the
-  search's `session` + `solutionSet`, so detail lookups skip the engine re-run
+- `POST /v1/summarize` — expand one solution (RBDs, aircraft), reusing the   search's `session` + `solutionSet`, so detail lookups skip the engine re-run
 - `GET /v1/locationTypes/...` — airport autocomplete
 
-**Key discovery.** The key is not in the page HTML; it's in a gstatic Alkali
-bundle, which contains about seven `AIza…` strings of which only two are
-authorized for this API. So candidates are *validated* against a cheap endpoint
-before use, then cached for 30 days, rather than taking the first regex match.
-If Google rotates keys, the server re-discovers automatically.
+**Key discovery.** The key is not in the page HTML; it's in a gstatic Alkali bundle, which contains about seven `AIza…` strings of which only two are authorized for this API. So candidates are *validated* against a cheap endpoint before use, then cached for 30 days, rather than taking the first regex match. If Google rotates keys, the server re-discovers automatically. 
 
-**Quirks handled.** The engine refuses server-side price sorting on multi-slice
-trips, so sorting is always done client-side. Premium economy is `PREMIUM-COACH`
-on the wire while every other cabin uses the plain enum form. Matrix
-intermittently returns "service is currently unavailable"; that is retried with
-backoff.
+**Quirks handled.** The engine refuses server-side price sorting on multi-slice trips, so sorting is always done client-side. Premium economy is `PREMIUM-COACH` on the wire while every other cabin uses the plain enum form. Matrix intermittently returns "service is currently unavailable"; that is retried with backoff.
 
 ## Hand-over links
 
-`get_itinerary_details` ends with deep links built from the priced itinerary, ported from
-[ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools):
+`get_itinerary_details` ends with deep links built from the priced itinerary, ported from [ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools):
 
 - **British Airways**, **Iberia**, **American** and **Qantas** pin the exact flights, dates and booking classes (BA also the cabin; Iberia also the fare basis). Shown when that airline is on the ticket (BA, IB or EI; IB or BA for Iberia; AA; QF, JQ or NZ). Editions can be set per call: `baEdition`, `ibEdition` (e.g. `en-GB`), `aaEdition` (e.g. `en_IE`), `qfEdition` and `qfCurrency`.
 - American uses its Europe/Asia/Pacific gateway. aa.com's US and UK gateway (which needs a 270 KB airport time-zone table) is not ported.
@@ -189,23 +180,14 @@ Live tests hit the real service and take 20–60s per search.
 ## Caveats
 
 - Not affiliated with Google, ITA Software, or ITA Matrix.
-- Matrix's rate limits are undocumented. A publicly exposed instance draws that
-  traffic to your server's IP.
-- If Google starts requiring the `bgProgramResponse` (WAA) anti-bot token,
-  this approach needs token handling added.
-- Prior art: [`itamx`](https://github.com/yogevkr/itamx), a Python CLI/MCP for
-  the same API, which is where the protocol details were confirmed.
+- Matrix's rate limits are undocumented. A publicly exposed instance draws that traffic to your server's IP.
+- If Google starts requiring the `bgProgramResponse` (WAA) anti-bot token, this approach needs token handling added.
+- Prior art: [`itamx`](https://github.com/yogevkr/itamx), a Python CLI/MCP for the same API, which is where the protocol details were confirmed.
 
 ## Contributing and changelog
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks pull requests go through, and
-[CHANGELOG.md](CHANGELOG.md) for release notes. `mcp.json` is a machine-readable summary of the transports,
-environment variables, tools, prompts and resources.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks pull requests go through, and [CHANGELOG.md](CHANGELOG.md) for release notes. `mcp.json` is a machine-readable summary of the transports, environment variables, tools, prompts and resources.
 
 ## Licence
 
-GPL-2.0-only; see [LICENSE](LICENSE). The booking-link builders in `src/handoff.js`
-are derived from [ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools)
-(GPL-2.0-only, by paul21, Steppo and Adam Hwang). The server itself began as
-[Filip-Kin/ita-matrix-mcp](https://github.com/Filip-Kin/ita-matrix-mcp), which declares the
-MIT licence; that code is MIT-licensed material incorporated into this GPL-2.0 work.
+GPL-2.0-only; see [LICENSE](LICENSE). The booking-link builders in `src/handoff.js` are derived from [ita-matrix-powertools](https://github.com/adamhwang/ita-matrix-powertools) (GPL-2.0-only, by paul21, Steppo and Adam Hwang). The server itself began as [Filip-Kin/ita-matrix-mcp](https://github.com/Filip-Kin/ita-matrix-mcp), which declares the MIT licence; that code is MIT-licensed material incorporated into this GPL-2.0 work.
