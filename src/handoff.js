@@ -32,6 +32,20 @@ function parts(iso) {
   return { y: m[1], mo: m[2], d: m[3], hh: m[4], mm: m[5], iso: iso.slice(0, 16) };
 }
 
+/**
+ * Calendar days from departure to arrival, as "+1", "+2", or "-1" when an
+ * eastbound Pacific crossing lands the day before it left. Empty if same day.
+ */
+export function dayOffset(dep, arr) {
+  if (!dep || !arr) return "";
+  const d = Math.round(
+    (Date.parse(arr.slice(0, 10)) - Date.parse(dep.slice(0, 10))) / 86400000
+  );
+  if (d > 0) return `+${d}`;
+  if (d < 0) return `${d}`;
+  return "";
+}
+
 /** Map "ORIGDESTRBD" -> { code, carrier } from every fare on every ticket. */
 export function fareMap(booking) {
   const map = new Map();
@@ -318,6 +332,7 @@ export function agentBrief(slices) {
       lines.push(
         `${s.carrier} ${s.fnr} ${s.rbd || "?"} ${s.dep.d}${months[Number(s.dep.mo) - 1]} ` +
           `${s.orig}${s.dest} ${s.dep.hh}${s.dep.mm} ${s.arr?.hh ?? "??"}${s.arr?.mm ?? "??"}` +
+          dayOffset(s.dep.iso, s.arr?.iso) +
           (s.fare ? `  ${s.fare}` : "")
       );
     }

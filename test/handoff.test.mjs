@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { flatten, buildLinks, agentBrief, fareMap, displayPrice } from "../src/handoff.js";
+import { flatten, buildLinks, agentBrief, dayOffset, fareMap, displayPrice } from "../src/handoff.js";
 import { renderDetail } from "../src/format.js";
 
 const seg = (carrier, number, o, d, dep, arr, cabin, code) => ({
@@ -85,7 +85,41 @@ test("fare basis is resolved from tickets, not bookingInfos", () => {
 test("agent brief lists one line per flight with class, date and fare", () => {
   const lines = agentBrief(flatten(booking));
   assert.equal(lines.length, 4);
-  assert.equal(lines[0], "QF 8162 A 11JUN DUBDXB 1420 0050  AFXTEST");
+  assert.equal(lines[0], "QF 8162 A 11JUN DUBDXB 1420 0050+1  AFXTEST");
+  assert.equal(lines[1], "QF 8414 A 12JUN DXBSYD 0215 2205  AFXTEST");
+});
+
+test("segment lines carry their own date and next-day marker", () => {
+  const text = renderDetail(booking);
+  assert.match(text, /QF8162\s+DUB→DXB\s+2027-06-11 14:20–00:50\+1\s/);
+  assert.match(text, /QF8414\s+DXB→SYD\s+2027-06-12 02:15–22:05\s/);
+});
+
+test("a connection past midnight shows the later date with no overnight flight", () => {
+  const text = renderDetail({
+    itinerary: {
+      slices: [
+        {
+          origin: { code: "ORD" },
+          destination: { code: "BOM" },
+          departure: "2026-11-09T18:00",
+          arrival: "2026-11-10T16:00",
+          segments: [
+            seg("BA", 1, "ORD", "JFK", "2026-11-09T18:00", "2026-11-09T23:00", "BUSINESS", "R"),
+            seg("BA", 2, "JFK", "BOM", "2026-11-10T07:00", "2026-11-10T16:00", "BUSINESS", "R"),
+          ],
+        },
+      ],
+    },
+  });
+  assert.match(text, /BA2\s+JFK→BOM\s+2026-11-10 07:00–16:00\s/);
+});
+
+test("arrival on the previous calendar day is marked -1", () => {
+  assert.equal(dayOffset("2026-11-09T10:00", "2026-11-08T23:00"), "-1");
+  assert.equal(dayOffset("2026-11-09T10:00", "2026-11-09T23:00"), "");
+  assert.equal(dayOffset("2026-11-09T20:30", "2026-11-11T11:10"), "+2");
+  assert.equal(dayOffset("2026-11-09T20:30", undefined), "");
 });
 
 test("QF link pins flight numbers and booking class", () => {

@@ -28,6 +28,12 @@ All notable changes to this project are recorded here. The format follows
   `s-` plus 12 hex digits form, a cached API key is trusted until Matrix rejects it, and both servers report the same
   server metadata.
 
+### Fixed
+
+- `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
+  agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
+  layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
+
 ### Security
 
 - The "Unknown Search ID" error no longer lists cached Search IDs, which let any client on a shared instance find and
