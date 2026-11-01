@@ -5,12 +5,12 @@ on:
 
 jobs:
   triage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       issues: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
