@@ -1,4 +1,4 @@
-import { fareMap } from "./handoff.js";
+import { dayOffset, fareMap } from "./handoff.js";
 
 /**
  * Turn Matrix's verbose JSON into compact text.
@@ -25,15 +25,6 @@ export const hm = (min) =>
 /** Matrix returns local times as "2026-10-15T01:30"; keep date + HH:MM only. */
 const clock = (iso) => (iso ? iso.slice(11, 16) : "??:??");
 const day = (iso) => (iso ? iso.slice(0, 10) : "????-??-??");
-
-/** Arrival on a later calendar day than departure -> "+1", "+2". */
-function dayOffset(dep, arr) {
-  if (!dep || !arr) return "";
-  const d = Math.round(
-    (Date.parse(arr.slice(0, 10)) - Date.parse(dep.slice(0, 10))) / 86400000
-  );
-  return d > 0 ? `+${d}` : "";
-}
 
 export function normalizeSolution(sol) {
   const price = parsePrice(sol.displayTotal);
@@ -172,7 +163,10 @@ export function renderDetail(booking, fallback) {
       out.push(
         `   ${seg.carrier?.code || "??"}${seg.flight?.number || "?"}  ` +
           `${seg.origin?.code}→${seg.destination?.code}  ` +
-          `${clock(seg.departure)}–${clock(seg.arrival)}  ${hm(seg.duration)}` +
+          // A date on every segment, not just "+1": a layover past midnight
+          // moves the next departure without any flight landing a day later.
+          `${day(seg.departure)} ${clock(seg.departure)}–${clock(seg.arrival)}` +
+          `${dayOffset(seg.departure, seg.arrival)}  ${hm(seg.duration)}` +
           (cabins.length ? `  ${cabins.join("/")}` : "") +
           (rbd.length ? `  RBD ${rbd.join(",")}` : "") +
           (fares.length ? `  fare ${fares.join(",")}` : "") +
