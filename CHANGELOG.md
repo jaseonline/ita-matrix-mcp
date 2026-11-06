@@ -40,6 +40,10 @@ All notable changes to this project are recorded here. The format follows
   read another client's results.
 - `ITA_MATRIX_SECRET_PATH` is trimmed without a backtracking regex (CodeQL `js/polynomial-redos`), and the `mcp-grade`
   workflow's token is limited to read access.
+- `@hono/node-server` moves to 2.1.6 to clear GHSA-rmxm-3fg6-px4f (a second decode in `serveStatic` that could bypass
+  middleware). The server never calls `serveStatic`, so it was not exploitable. To allow the update,
+  `@modelcontextprotocol/node` moves to 2.1.2 and `@modelcontextprotocol/server`/`client` to 2.4.0 in both packages.
+  The Worker's `agents` moves to 0.33.0, which declares 2.4.0 as its peer.
 
 ## [1.0.0]
 

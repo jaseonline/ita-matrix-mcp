@@ -11,8 +11,8 @@
     "test": "node test/local.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.3.1",
-    "agents": "0.30.1",
+    "@modelcontextprotocol/server": "2.4.0",
+    "agents": "0.33.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
