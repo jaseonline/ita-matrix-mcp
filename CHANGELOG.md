@@ -27,6 +27,7 @@ All notable changes to this project are recorded here. The format follows
   `src/server.js`, `src/http-server.js` and `cloudflare/src/` differ by runtime. Node Search IDs now take the Worker's
   `s-` plus 12 hex digits form, a cached API key is trusted until Matrix rejects it, and both servers report the same
   server metadata.
+- The Worker's `wrangler` dev dependency moves to 4.158.0 (`workerd` 1.20261104.1, whose `allowScripts` entry follows).
 
 ### Fixed
 
