@@ -35,6 +35,13 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- The Claude workflows (`claude_auto_review`, `claude_maintenance`) no longer fail at start-up: they stopped installing
+  the `feature-dev@claude-plugins-official` plugin, which can no longer be installed.
+
+### Removed
+
+- The `claude-code-review` workflow. It duplicated `claude_auto_review` on every PR, and its `/code-review:code-review`
+  prompt came from a plugin that is no longer in the marketplace.
 - `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
   agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
   layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
