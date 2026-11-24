@@ -35,6 +35,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- The automatic PR review workflow no longer fails before reviewing: it stopped installing the
+  `feature-dev@claude-plugins-official` plugin, which can no longer be installed.
 - `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
   agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
   layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
