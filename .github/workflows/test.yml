@@ -13,6 +13,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run lint
       # Offline: never set ITA_MATRIX_LIVE here, Matrix's rate limits are undocumented.
       - run: npm test
       - run: node test/http-smoke.mjs

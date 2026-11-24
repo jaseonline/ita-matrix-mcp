@@ -36,7 +36,11 @@ await new Promise((resolve, reject) => {
   const tick = async () => {
     try {
       const r = await fetch(`${BASE}/health`);
-      if (r.ok) return clearTimeout(t), resolve();
+      if (r.ok) {
+        clearTimeout(t);
+        resolve();
+        return;
+      }
     } catch {}
     setTimeout(tick, 200);
   };
@@ -69,7 +73,10 @@ const rawStatus = await new Promise((resolve, reject) => {
     }
   });
   sock.on("error", reject);
-  setTimeout(() => (sock.destroy(), reject(new Error("timeout"))), 5000);
+  setTimeout(() => {
+    sock.destroy();
+    reject(new Error("timeout"));
+  }, 5000);
 });
 check("rejects disallowed Host header", rawStatus === 403, `got ${rawStatus}`);
 

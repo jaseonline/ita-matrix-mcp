@@ -73,7 +73,7 @@ test("the memory store expires entries after 6 hours", async () => {
 test("a KV-backed store keeps the original expiry on update", async () => {
   const puts = [];
   const store = new SearchStore({
-    put: async (key, value, opts) => puts.push(opts.expirationTtl),
+    put: async (_key, _value, opts) => puts.push(opts.expirationTtl),
   });
   await store.update("s-000000000000", { createdAt: Date.now() - 3600 * 1000 });
   assert.ok(puts[0] <= 5 * 3600 && puts[0] > 5 * 3600 - 5);

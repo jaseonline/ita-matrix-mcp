@@ -6,7 +6,6 @@
  * (slow — a multi-city search takes 20-60s).
  */
 
-import { spawn } from "node:child_process";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
