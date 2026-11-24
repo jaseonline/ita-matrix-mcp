@@ -3,10 +3,14 @@ name: mcp-grade
 on:
   push:
     paths:
-      - src
+      - "src/**"
+      - "cloudflare/src/**"
+      - ".github/workflows/mcp-grade.yml"
   pull_request:
     paths:
-      - src
+      - "src/**"
+      - "cloudflare/src/**"
+      - ".github/workflows/mcp-grade.yml"
   workflow_dispatch:
 
 permissions:
