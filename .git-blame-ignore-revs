@@ -1,0 +1,3 @@
+# Pure-formatting commits, skipped by `git blame` (git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# style: apply Biome formatting
+a9d6bf4b537a29b334d63814610e86183161bde2

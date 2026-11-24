@@ -32,9 +32,7 @@ function pruneMemory() {
 }
 
 const hex = (bytes) =>
-  [...crypto.getRandomValues(new Uint8Array(bytes))]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 export class SearchStore {
   /** @param {KVNamespace|null} [kv] */

@@ -23,7 +23,6 @@
 const CABIN_RANK = { COACH: 0, "PREMIUM-COACH": 1, "PREMIUM-ECONOMY": 1, BUSINESS: 2, FIRST: 3 };
 const cabinRank = (c) => CABIN_RANK[String(c || "").toUpperCase()] ?? 0;
 
-
 /** "2027-06-11T14:20" -> parts. Matrix returns local times with no offset. */
 function parts(iso) {
   const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
@@ -37,9 +36,7 @@ function parts(iso) {
  */
 export function dayOffset(dep, arr) {
   if (!dep || !arr) return "";
-  const d = Math.round(
-    (Date.parse(arr.slice(0, 10)) - Date.parse(dep.slice(0, 10))) / 86400000
-  );
+  const d = Math.round((Date.parse(arr.slice(0, 10)) - Date.parse(dep.slice(0, 10))) / 86400000);
   if (d > 0) return `+${d}`;
   if (d < 0) return `${d}`;
   return "";
@@ -211,7 +208,7 @@ export function aaLink(slices, pax, { edition = "en_IE" } = {}) {
   const legs = [];
   for (const sl of slices) {
     const segs = sl.segs.map(
-      (s) => `${stamp(s.arr)},${s.rbd},${stamp(s.dep)},${s.dest},${s.carrier}${s.fnr},${s.orig}`
+      (s) => `${stamp(s.arr)},${s.rbd},${stamp(s.dep)},${s.dest},${s.carrier}${s.fnr},${s.orig}`,
     );
     search += `${segs.length},${segs.join(",")},`;
     legs.push(`${sl.dep.y}-${sl.dep.mo}-${sl.dep.d},${sl.dest},,${sl.orig},`);
@@ -332,7 +329,7 @@ export function agentBrief(slices) {
         `${s.carrier} ${s.fnr} ${s.rbd || "?"} ${s.dep.d}${months[Number(s.dep.mo) - 1]} ` +
           `${s.orig}${s.dest} ${s.dep.hh}${s.dep.mm} ${s.arr?.hh ?? "??"}${s.arr?.mm ?? "??"}` +
           dayOffset(s.dep.iso, s.arr?.iso) +
-          (s.fare ? `  ${s.fare}` : "")
+          (s.fare ? `  ${s.fare}` : ""),
       );
     }
   }

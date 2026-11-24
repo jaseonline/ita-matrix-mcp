@@ -36,7 +36,7 @@ try {
         arguments: { slices: [{ origin, destination, date }], limit: 3 },
       },
       undefined,
-      { timeout: 180_000 }
+      { timeout: 180_000 },
     );
     console.log(textOf(result));
     process.exitCode = result.isError ? 1 : 0;

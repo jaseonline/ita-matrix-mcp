@@ -17,8 +17,7 @@ import { createMcpHandler } from "agents/mcp/server";
 import { trimSlashes } from "../../src/secret-path.js";
 import { createWorkerServer } from "./runtime.js";
 
-const text = (body, status) =>
-  new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
+const text = (body, status) => new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
 
 export default {
   async fetch(request, env, ctx) {
@@ -31,7 +30,7 @@ export default {
     if (!secret) {
       return text(
         "Not configured: set the ITA_MATRIX_SECRET_PATH secret (wrangler secret put ITA_MATRIX_SECRET_PATH).",
-        503
+        503,
       );
     }
 

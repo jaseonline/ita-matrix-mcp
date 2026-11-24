@@ -12,8 +12,7 @@ import { createNodeServer } from "../src/node-runtime.js";
 import { ROUTING_REFERENCE } from "../src/routing-reference.js";
 
 const client = new Client({ name: "guidance-test", version: "1.0.0" });
-const promptText = async (name, args) =>
-  (await client.getPrompt({ name, arguments: args })).messages[0].content.text;
+const promptText = async (name, args) => (await client.getPrompt({ name, arguments: args })).messages[0].content.text;
 
 before(async () => {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();

@@ -11,7 +11,7 @@
     "start": "node src/server.js",
     "test": "node --test \"test/*.test.mjs\" && node test/smoke.mjs",
     "test:live": "ITA_MATRIX_LIVE=1 node --test test/",
-    "lint": "biome lint"
+    "lint": "biome check"
   },
   "engines": {
     "node": ">=20"

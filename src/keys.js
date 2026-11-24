@@ -31,10 +31,7 @@ const UA =
 
 // Verified working as of the last protocol check. Used before falling back to
 // a full bundle scrape, which costs a ~2 MB download.
-const SEEDS = [
-  "AIzaSyBH1mte6BdKzvf0c2mYprkyvfHCRWmfX7g",
-  "AIzaSyA-9pyRbyL7NFyQLAFM7bjEXdUHEZv6RRo",
-];
+const SEEDS = ["AIzaSyBH1mte6BdKzvf0c2mYprkyvfHCRWmfX7g", "AIzaSyA-9pyRbyL7NFyQLAFM7bjEXdUHEZv6RRo"];
 
 /** Pull every AIza-shaped candidate out of the homepage and its alkali bundle. */
 async function discoverCandidates(fetchImpl) {
@@ -120,7 +117,7 @@ export class KeyProvider {
 
     throw new Error(
       "Could not find a working ITA Matrix API key. Matrix may have changed " +
-        "its web app. Set ITA_MATRIX_API_KEY to override."
+        "its web app. Set ITA_MATRIX_API_KEY to override.",
     );
   }
 

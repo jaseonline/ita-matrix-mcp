@@ -44,7 +44,9 @@ async function rpc(method, params, { path = URL_, notify = false } = {}) {
       }
     }
   } else if (raw) {
-    try { msg = JSON.parse(raw); } catch {}
+    try {
+      msg = JSON.parse(raw);
+    } catch {}
   }
   return { status: res.status, ms: Date.now() - t0, msg, raw };
 }
@@ -68,14 +70,23 @@ r = await rpc("initialize", {
   capabilities: {},
   clientInfo: { name: "local-test", version: "0" },
 });
-ok(r.status === 200 && r.msg?.result?.serverInfo?.name === "ita-matrix", `initialize -> serverInfo ita-matrix (HTTP ${r.status})`);
+ok(
+  r.status === 200 && r.msg?.result?.serverInfo?.name === "ita-matrix",
+  `initialize -> serverInfo ita-matrix (HTTP ${r.status})`,
+);
 ok(/Searches ITA Matrix/.test(r.msg?.result?.instructions || ""), "initialize carries server instructions");
 
 await rpc("notifications/initialized", undefined, { notify: true });
 
 r = await rpc("tools/list");
 const names = (r.msg?.result?.tools || []).map((t) => t.name).sort();
-const want = ["get_itinerary_details", "lookup_airport", "routing_language_reference", "search_flexible_dates", "search_flights"];
+const want = [
+  "get_itinerary_details",
+  "lookup_airport",
+  "routing_language_reference",
+  "search_flexible_dates",
+  "search_flights",
+];
 ok(JSON.stringify(names) === JSON.stringify(want), `tools/list -> ${names.join(", ")}`);
 const sf = (r.msg?.result?.tools || []).find((t) => t.name === "search_flights");
 ok(sf?.inputSchema?.properties?.slices?.maxItems === 6, "search_flights schema: slices maxItems 6");
@@ -87,17 +98,26 @@ ok(/HOW THE GRAMMAR WORKS/.test(textOf(r)), "routing_language_reference returns 
 // --- prompts and resources ---------------------------------------------------
 r = await rpc("prompts/list");
 const promptNames = (r.msg?.result?.prompts || []).map((p) => p.name).sort();
-ok(JSON.stringify(promptNames) === JSON.stringify(["explain_empty_search", "hunt_premium_fare", "plan_trip"]), `prompts/list -> ${promptNames.join(", ")}`);
+ok(
+  JSON.stringify(promptNames) === JSON.stringify(["explain_empty_search", "hunt_premium_fare", "plan_trip"]),
+  `prompts/list -> ${promptNames.join(", ")}`,
+);
 
 r = await rpc("prompts/get", { name: "plan_trip", arguments: { trip: "London to Tokyo in May" } });
 ok(/London to Tokyo in May/.test(r.msg?.result?.messages?.[0]?.content?.text || ""), "prompts/get fills in plan_trip");
 
 r = await rpc("resources/list");
 const uris = (r.msg?.result?.resources || []).map((x) => x.uri).sort();
-ok(JSON.stringify(uris) === JSON.stringify(["ita://guides/fare-strategy", "ita://reference/routing"]), `resources/list -> ${uris.join(", ")}`);
+ok(
+  JSON.stringify(uris) === JSON.stringify(["ita://guides/fare-strategy", "ita://reference/routing"]),
+  `resources/list -> ${uris.join(", ")}`,
+);
 
 r = await rpc("resources/read", { uri: "ita://reference/routing" });
-ok(/HOW THE GRAMMAR WORKS/.test(r.msg?.result?.contents?.[0]?.text || ""), "resources/read returns the routing reference");
+ok(
+  /HOW THE GRAMMAR WORKS/.test(r.msg?.result?.contents?.[0]?.text || ""),
+  "resources/read returns the routing reference",
+);
 
 // --- validation errors (no upstream call) ------------------------------------
 r = await call("search_flights", { slices: [{ origin: "LHR", destination: "JFK", date: "10/12/2026" }] });
@@ -110,26 +130,57 @@ ok(!/Known IDs/.test(textOf(r)), "unknown ID error does not list other IDs");
 // --- live tools ----------------------------------------------------------------
 if (LIVE) {
   r = await call("lookup_airport", { query: "milan", limit: 5 });
-  console.log(`      lookup_airport ${r.ms}ms:\n${textOf(r).split("\n").map((l) => "      " + l).join("\n")}`);
+  console.log(
+    `      lookup_airport ${r.ms}ms:\n${textOf(r)
+      .split("\n")
+      .map((l) => "      " + l)
+      .join("\n")}`,
+  );
   ok(!r.msg?.result?.isError && /MIL|MXP|LIN/.test(textOf(r)), "lookup_airport 'milan' finds Milan airports");
 
   const date = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
   r = await call("search_flights", { slices: [{ origin: "LHR", destination: "JFK", date }], limit: 5 });
   const txt = textOf(r);
-  console.log(`      search_flights ${r.ms}ms:\n${txt.split("\n").slice(0, 14).map((l) => "      " + l).join("\n")}`);
+  console.log(
+    `      search_flights ${r.ms}ms:\n${txt
+      .split("\n")
+      .slice(0, 14)
+      .map((l) => "      " + l)
+      .join("\n")}`,
+  );
   const sid = txt.match(/\bs-[0-9a-f]{12}\b/)?.[0];
   ok(!r.msg?.result?.isError && !!sid, `search_flights returns itineraries and a Search ID (${sid})`);
 
   if (sid) {
     r = await call("get_itinerary_details", { searchId: sid, rank: 1 });
     const d = textOf(r);
-    console.log(`      get_itinerary_details ${r.ms}ms:\n${d.split("\n").slice(0, 24).map((l) => "      " + l).join("\n")}`);
-    ok(!r.msg?.result?.isError && /Agent brief/.test(d) && /Links:/.test(d), "get_itinerary_details returns detail, agent brief and links");
+    console.log(
+      `      get_itinerary_details ${r.ms}ms:\n${d
+        .split("\n")
+        .slice(0, 24)
+        .map((l) => "      " + l)
+        .join("\n")}`,
+    );
+    ok(
+      !r.msg?.result?.isError && /Agent brief/.test(d) && /Links:/.test(d),
+      "get_itinerary_details returns detail, agent brief and links",
+    );
     ok(/fare|Fare/.test(d), "detail mentions fare basis (check the output above for real codes)");
   }
 
-  r = await call("search_flexible_dates", { origin: "LHR", destination: "JFK", startDate: date, endDate: new Date(Date.parse(date) + 2 * 86400000).toISOString().slice(0, 10), maxDates: 3 });
-  console.log(`      search_flexible_dates ${r.ms}ms:\n${textOf(r).split("\n").map((l) => "      " + l).join("\n")}`);
+  r = await call("search_flexible_dates", {
+    origin: "LHR",
+    destination: "JFK",
+    startDate: date,
+    endDate: new Date(Date.parse(date) + 2 * 86400000).toISOString().slice(0, 10),
+    maxDates: 3,
+  });
+  console.log(
+    `      search_flexible_dates ${r.ms}ms:\n${textOf(r)
+      .split("\n")
+      .map((l) => "      " + l)
+      .join("\n")}`,
+  );
   ok(!r.msg?.result?.isError && /cheapest/i.test(textOf(r)), "search_flexible_dates reports cheapest dates");
 } else {
   console.log("SKIP  live tools (set LIVE=1)");

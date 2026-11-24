@@ -45,7 +45,10 @@ export function normalizeCabin(cabin) {
 }
 
 const boundary = () =>
-  "batch" + Math.floor(Math.random() * 1e18).toString().padStart(19, "0");
+  "batch" +
+  Math.floor(Math.random() * 1e18)
+    .toString()
+    .padStart(19, "0");
 
 const splitCodes = (s) =>
   String(s)
@@ -67,15 +70,10 @@ function envelope({ method, path, key, body, bound }) {
     "Content-Transfer-Encoding: binary",
     `Content-ID: <${bound}+gapiRequest@googleapis.com>`,
     "",
-    `${method} ${path}${path.includes("?") ? "&" : "?"}key=${key}${
-      method === "POST" ? "&alt=json" : ""
-    }`,
+    `${method} ${path}${path.includes("?") ? "&" : "?"}key=${key}${method === "POST" ? "&alt=json" : ""}`,
     ...ALKALI_HEADERS,
   ];
-  const tail =
-    method === "POST"
-      ? ["Content-Type: application/json", "", JSON.stringify(body)]
-      : ["", ""];
+  const tail = method === "POST" ? ["Content-Type: application/json", "", JSON.stringify(body)] : ["", ""];
   return [...head, ...tail, `--${bound}--`, ""].join("\r\n");
 }
 
@@ -164,8 +162,7 @@ export class MatrixClient {
   async _probeKey(key) {
     const j = await this._raw({
       method: "GET",
-      path:
-        "/v1/locationTypes/CITIES_AND_AIRPORTS/partialNames/lond/locations?pageSize=1",
+      path: "/v1/locationTypes/CITIES_AND_AIRPORTS/partialNames/lond/locations?pageSize=1",
       key,
       timeoutMs: 15000,
     });
@@ -178,30 +175,26 @@ export class MatrixClient {
     const timer = setTimeout(() => ctrl.abort(), timeoutMs ?? this._timeout);
     let res;
     try {
-      res = await this._fetch(
-        `${BATCH_URL}?%24ct=multipart%2Fmixed%3B%20boundary%3D${bound}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain; charset=UTF-8",
-            Origin: ORIGIN,
-            Referer: ORIGIN + "/",
-            Accept: "*/*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "User-Agent": UA,
-          },
-          body: envelope({ method, path, key, body, bound }),
-          signal: ctrl.signal,
-        }
-      );
+      res = await this._fetch(`${BATCH_URL}?%24ct=multipart%2Fmixed%3B%20boundary%3D${bound}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=UTF-8",
+          Origin: ORIGIN,
+          Referer: ORIGIN + "/",
+          Accept: "*/*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent": UA,
+        },
+        body: envelope({ method, path, key, body, bound }),
+        signal: ctrl.signal,
+      });
     } catch (e) {
       if (e.name === "AbortError") {
         throw new MatrixError(
           `Matrix did not respond within ${Math.round(
-            (timeoutMs ?? this._timeout) / 1000
-          )}s. Complex multi-city searches are slow; try fewer legs, ` +
-            `maxStops=0, or a narrower routing code.`,
-          { kind: "timeout", retryable: true }
+            (timeoutMs ?? this._timeout) / 1000,
+          )}s. Complex multi-city searches are slow; try fewer legs, ` + `maxStops=0, or a narrower routing code.`,
+          { kind: "timeout", retryable: true },
         );
       }
       throw new MatrixError(`Network error talking to Matrix: ${e.message}`, {
@@ -252,19 +245,19 @@ export class MatrixClient {
           await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
           continue;
         }
-        throw new MatrixError(
-          `Matrix is temporarily unavailable (retried 3x): ${msg}`,
-          { kind: "upstream", retryable: true }
-        );
+        throw new MatrixError(`Matrix is temporarily unavailable (retried 3x): ${msg}`, {
+          kind: "upstream",
+          retryable: true,
+        });
       }
 
       throw new MatrixError(this._explain(msg), { kind: "api" });
     }
 
-    throw new MatrixError(
-      `Matrix call failed after retries${lastError ? `: ${lastError}` : "."}`,
-      { kind: "upstream", retryable: true }
-    );
+    throw new MatrixError(`Matrix call failed after retries${lastError ? `: ${lastError}` : "."}`, {
+      kind: "upstream",
+      retryable: true,
+    });
   }
 
   /** Turn the engine's raw Java-ish errors into something actionable. */
