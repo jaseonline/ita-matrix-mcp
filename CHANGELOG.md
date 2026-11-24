@@ -16,6 +16,8 @@ All notable changes to this project are recorded here. The format follows
 - MCP prompts (`plan_trip`, `hunt_premium_fare`, `explain_empty_search`) and resources (`ita://reference/routing`,
   `ita://guides/fare-strategy`) on both the Node server and the Cloudflare Worker.
 - `social-banner` workflow that renders the README banner to a 1280x640 PNG for use as the repository social preview.
+- Claude Code setup: `CLAUDE.md`, a `/deploy-worker` skill for production Worker deploys, and project hooks that run
+  the offline tests after `src/` edits and block edits to `.env`, `.dev.vars` and `package-lock.json`.
 - Biome linting (`npm run lint`, also run in CI) with the recommended rule set; existing findings fixed (unused
   imports and variables, assignments in `return` expressions, comma operators).
 
