@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tests
 - `npm test` runs offline and quickly. Run it after any `src/` change.
+- `npm run lint` runs `biome check`, which covers lint and formatting, and CI enforces it. Fix with `npx biome check --write`.
 - `npm run test:live` uses POSIX inline env syntax, so run it from Bash, not PowerShell. Live tests make real Matrix searches and are fine to run, but never add them to CI.
 - `node test/http-smoke.mjs` runs in CI but isn't part of `npm test`.
 - Worker:

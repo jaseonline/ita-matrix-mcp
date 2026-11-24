@@ -32,6 +32,8 @@ All notable changes to this project are recorded here. The format follows
   `s-` plus 12 hex digits form, a cached API key is trusted until Matrix rejects it, and both servers report the same
   server metadata.
 - The Worker's `wrangler` dev dependency moves to 4.158.0 (`workerd` 1.20261104.1, whose `allowScripts` entry follows).
+- Code is now formatted with Biome, and `npm run lint` (`biome check`) enforces formatting as well as lint rules in CI.
+  The reformat commit is listed in `.git-blame-ignore-revs`.
 
 ### Fixed
 
