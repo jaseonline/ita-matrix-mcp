@@ -148,15 +148,14 @@ const PROMPTS = [
             "flight numbers, stops and booking class, followed by the Search ID.",
         ]
           .filter((l, i, all) => l || all[i - 1])
-          .join("\n")
+          .join("\n"),
       ),
   },
   {
     name: "hunt_premium_fare",
     title: "Hunt for a premium-cabin fare",
     description:
-      "Look for a cheap business or first fare by varying the origin, then " +
-      "narrowing by alliance and fare bucket.",
+      "Look for a cheap business or first fare by varying the origin, then " + "narrowing by alliance and fare bucket.",
     argsSchema: {
       destination: z.string().describe('Where to, e.g. "SYD" or "Sydney".'),
       dates: z.string().describe('Outbound and return dates or a window, e.g. "12-26 March 2027".'),
@@ -188,11 +187,11 @@ const PROMPTS = [
             "The origin is the main price lever; salesCity is not.",
           "4. On the cheapest origin, try a few single dates across the window. Avoid " +
             "search_flexible_dates here, because it tends to time out on long-haul trips.",
-          "5. Add the alliance, then fare buckets (for example \"f bc=J|C|D\"), one change per run.",
+          '5. Add the alliance, then fare buckets (for example "f bc=J|C|D"), one change per run.',
           "6. Run get_itinerary_details on the best one to three, and state which segments are " +
             "in the premium cabin and which are not.",
           "7. Compare on total price, and give the saving against the home-airport baseline.",
-        ].join("\n")
+        ].join("\n"),
       ),
   },
   {
@@ -213,8 +212,8 @@ const PROMPTS = [
           "",
           `Search: ${searchDescription}`,
           "",
-          "Check first whether a bare carrier or airport is fixing the flight count: \"AA\" means " +
-            "exactly one flight and \"~ORD\" means exactly one connection, so it drops nonstops.",
+          'Check first whether a bare carrier or airport is fixing the flight count: "AA" means ' +
+            'exactly one flight and "~ORD" means exactly one connection, so it drops nonstops.',
           "",
           "Then relax in this order, one change per re-run, and stop when fares appear:",
           "1. Drop extraCodes.",
@@ -229,7 +228,7 @@ const PROMPTS = [
             "concluding there are no fares.",
           "",
           "Report which constraint caused the empty result and the closest working search.",
-        ].join("\n")
+        ].join("\n"),
       ),
   },
 ];

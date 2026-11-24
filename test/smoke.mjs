@@ -41,14 +41,8 @@ for (const expected of [
 
 // The slices array is the whole point — make sure it survived schema generation.
 const search = tools.find((t) => t.name === "search_flights");
-check(
-  "search_flights takes a slices array",
-  search?.inputSchema?.properties?.slices?.type === "array"
-);
-check(
-  "slice exposes a routing field",
-  !!search?.inputSchema?.properties?.slices?.items?.properties?.routing
-);
+check("search_flights takes a slices array", search?.inputSchema?.properties?.slices?.type === "array");
+check("slice exposes a routing field", !!search?.inputSchema?.properties?.slices?.items?.properties?.routing);
 
 const ref = await client.callTool({
   name: "routing_language_reference",
@@ -57,7 +51,7 @@ const ref = await client.callTool({
 check(
   "routing reference returns content",
   ref.content?.[0]?.text?.includes("ROUTING CODES"),
-  `${ref.content?.[0]?.text?.length ?? 0} chars`
+  `${ref.content?.[0]?.text?.length ?? 0} chars`,
 );
 
 // Bad input should come back as a clean tool error, not a crash.
@@ -68,7 +62,7 @@ const bad = await client.callTool({
 check(
   "rejects malformed date gracefully",
   bad.isError === true && /YYYY-MM-DD/.test(bad.content?.[0]?.text || ""),
-  (bad.content?.[0]?.text || "").slice(0, 60)
+  (bad.content?.[0]?.text || "").slice(0, 60),
 );
 
 const unknown = await client.callTool({
@@ -77,16 +71,17 @@ const unknown = await client.callTool({
 });
 check(
   "unknown search id is handled",
-  unknown.isError === true && /Unknown Search ID/.test(unknown.content?.[0]?.text || "")
+  unknown.isError === true && /Unknown Search ID/.test(unknown.content?.[0]?.text || ""),
 );
 // Search IDs are the only thing keeping one client out of another's results.
-check(
-  "unknown search id error does not list other IDs",
-  !/Known IDs/.test(unknown.content?.[0]?.text || "")
-);
+check("unknown search id error does not list other IDs", !/Known IDs/.test(unknown.content?.[0]?.text || ""));
 
 const { prompts } = await client.listPrompts();
-check("prompts are listed", prompts.some((p) => p.name === "plan_trip"), `${prompts.length} prompts`);
+check(
+  "prompts are listed",
+  prompts.some((p) => p.name === "plan_trip"),
+  `${prompts.length} prompts`,
+);
 
 const guide = await client.readResource({ uri: "ita://guides/fare-strategy" });
 check("fare strategy resource reads", /Search order/.test(guide.contents?.[0]?.text || ""));
@@ -98,8 +93,11 @@ if (LIVE) {
     name: "lookup_airport",
     arguments: { query: "milan", limit: 5 },
   });
-  check("lookup_airport hits Matrix", /MIL|MXP|LIN/.test(loc.content?.[0]?.text || ""),
-    (loc.content?.[0]?.text || "").split("\n")[0]);
+  check(
+    "lookup_airport hits Matrix",
+    /MIL|MXP|LIN/.test(loc.content?.[0]?.text || ""),
+    (loc.content?.[0]?.text || "").split("\n")[0],
+  );
 
   const d = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
   const multi = await client.callTool({
@@ -114,8 +112,7 @@ if (LIVE) {
     },
   });
   const body = multi.content?.[0]?.text || "";
-  check("multi-city (open-jaw) search returns fares", !multi.isError && /#1/.test(body),
-    body.split("\n")[0]);
+  check("multi-city (open-jaw) search returns fares", !multi.isError && /#1/.test(body), body.split("\n")[0]);
   console.log(body.slice(0, 700));
 
   const id = body.match(/Search ID: (\S+)/)?.[1];
@@ -125,8 +122,7 @@ if (LIVE) {
       arguments: { searchId: id, rank: 1 },
     });
     const dt = det.content?.[0]?.text || "";
-    check("details resolve booking classes", !det.isError && /Leg 1/.test(dt),
-      dt.split("\n")[0]);
+    check("details resolve booking classes", !det.isError && /Leg 1/.test(dt), dt.split("\n")[0]);
     console.log(dt.slice(0, 500));
   }
 }

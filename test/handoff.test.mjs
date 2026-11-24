@@ -178,10 +178,18 @@ test("Iberia link pins class, fare basis and slices", () => {
   const price = displayPrice({ displayTotal: "GBP9737.00" });
   assert.deepEqual(price, { currency: "GBP", value: 9737 });
   const url = buildLinks(flatten(ib), { adults: 1 }, { price }).find((l) => l.name === "Iberia").url;
-  assert.ok(url.startsWith("http://www.iberia.com/web/partnerLink.do?PointOfSaleCountry=GB&UserCurrency=GBP&DisplayedPrice=9737"));
+  assert.ok(
+    url.startsWith(
+      "http://www.iberia.com/web/partnerLink.do?PointOfSaleCountry=GB&UserCurrency=GBP&DisplayedPrice=9737",
+    ),
+  );
   assert.ok(url.includes("TripType=RoundTrip&Adult=1&Child=0&InfantLap=0"));
-  assert.ok(url.includes("&Cabin1=First&Carrier1=IB&Origin1=DUB&Destination1=DXB&BookingCode1=A&FlightNumber1=8162&DepartureDate1=2027-06-11&FareBasis1=AFXTEST"));
-  assert.ok(url.endsWith("&Slice1=1,2&Slice2=3,4") || url.includes("&Slice1=1,2&") && url.endsWith("&Slice2=3,4"));
+  assert.ok(
+    url.includes(
+      "&Cabin1=First&Carrier1=IB&Origin1=DUB&Destination1=DXB&BookingCode1=A&FlightNumber1=8162&DepartureDate1=2027-06-11&FareBasis1=AFXTEST",
+    ),
+  );
+  assert.ok(url.endsWith("&Slice1=1,2&Slice2=3,4") || (url.includes("&Slice1=1,2&") && url.endsWith("&Slice2=3,4")));
 });
 
 test("one failing link builder does not drop the others", () => {

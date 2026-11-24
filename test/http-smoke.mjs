@@ -61,7 +61,7 @@ const rawStatus = await new Promise((resolve, reject) => {
       `POST /mcp/${SECRET} HTTP/1.1\r\n` +
         `Host: evil.example.com\r\n` +
         `Content-Type: application/json\r\n` +
-        `Content-Length: 2\r\n\r\n{}`
+        `Content-Length: 2\r\n\r\n{}`,
     );
   });
   let buf = "";
@@ -97,8 +97,7 @@ const { tools } = await client.listTools();
 check("tools listed over HTTP", tools.length === 5, `${tools.length} tools`);
 check(
   "search_flights present with slices",
-  tools.find((t) => t.name === "search_flights")?.inputSchema?.properties?.slices?.type ===
-    "array"
+  tools.find((t) => t.name === "search_flights")?.inputSchema?.properties?.slices?.type === "array",
 );
 
 const ref = await client.callTool({ name: "routing_language_reference", arguments: {} });
@@ -147,11 +146,7 @@ if (searchId) {
     arguments: { searchId, rank: 1 },
   });
   const text = det.content?.[0]?.text || "";
-  check(
-    "Search ID survives a reconnect",
-    !det.isError && /RBD/.test(text),
-    text.split("\n").slice(0, 2).join(" | ")
-  );
+  check("Search ID survives a reconnect", !det.isError && /RBD/.test(text), text.split("\n").slice(0, 2).join(" | "));
   await b.close();
 }
 

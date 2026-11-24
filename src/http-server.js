@@ -62,8 +62,7 @@ setInterval(sweepSessions, 60_000).unref();
 function send(res, code, payload, headers = {}) {
   const body = typeof payload === "string" ? payload : JSON.stringify(payload);
   res.writeHead(code, {
-    "Content-Type":
-      typeof payload === "string" ? "text/plain; charset=utf-8" : "application/json",
+    "Content-Type": typeof payload === "string" ? "text/plain; charset=utf-8" : "application/json",
     ...headers,
   });
   res.end(body);
@@ -94,7 +93,9 @@ const httpServer = http.createServer(async (req, res) => {
   }
 
   if (ALLOWED_HOSTS.length) {
-    const host = String(req.headers.host || "").split(":")[0].toLowerCase();
+    const host = String(req.headers.host || "")
+      .split(":")[0]
+      .toLowerCase();
     if (!ALLOWED_HOSTS.includes(host)) {
       log("rejected Host header:", host);
       return send(res, 403, "Forbidden");
@@ -137,9 +138,7 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     const body = await readBody(req);
-    const isInit =
-      body &&
-      (Array.isArray(body) ? body : [body]).some((m) => m?.method === "initialize");
+    const isInit = body && (Array.isArray(body) ? body : [body]).some((m) => m?.method === "initialize");
     if (!isInit) {
       return rpcError(res, -32000, "Missing Mcp-Session-Id; send initialize first.", 400);
     }
@@ -179,10 +178,7 @@ httpServer.listen(PORT, HOST, () => {
   log(`listening on ${HOST}:${PORT}`);
   log(`MCP endpoint: ${MCP_PATH}`);
   if (!SECRET) {
-    log(
-      "WARNING: ITA_MATRIX_SECRET_PATH is unset — the endpoint is reachable by " +
-        "anyone who knows the hostname."
-    );
+    log("WARNING: ITA_MATRIX_SECRET_PATH is unset — the endpoint is reachable by " + "anyone who knows the hostname.");
   }
   if (!ALLOWED_HOSTS.length) {
     log("note: ITA_MATRIX_ALLOWED_HOSTS unset — Host header check disabled.");

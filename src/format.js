@@ -19,8 +19,7 @@ export function parsePrice(display) {
   };
 }
 
-export const hm = (min) =>
-  min == null ? "?" : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
+export const hm = (min) => (min == null ? "?" : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`);
 
 /** Matrix returns local times as "2026-10-15T01:30"; keep date + HH:MM only. */
 const clock = (iso) => (iso ? iso.slice(11, 16) : "??:??");
@@ -52,13 +51,10 @@ export function normalizeSolution(sol) {
 const SORTS = {
   price: (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
   duration: (a, b) => a.totalDurationMinutes - b.totalDurationMinutes,
-  departure: (a, b) =>
-    String(a.slices[0]?.departure).localeCompare(String(b.slices[0]?.departure)),
-  arrival: (a, b) =>
-    String(a.slices.at(-1)?.arrival).localeCompare(String(b.slices.at(-1)?.arrival)),
+  departure: (a, b) => String(a.slices[0]?.departure).localeCompare(String(b.slices[0]?.departure)),
+  arrival: (a, b) => String(a.slices.at(-1)?.arrival).localeCompare(String(b.slices.at(-1)?.arrival)),
   stops: (a, b) =>
-    a.slices.reduce((n, s) => n + s.stops, 0) -
-      b.slices.reduce((n, s) => n + s.stops, 0) ||
+    a.slices.reduce((n, s) => n + s.stops, 0) - b.slices.reduce((n, s) => n + s.stops, 0) ||
     (a.price ?? Infinity) - (b.price ?? Infinity),
 };
 
@@ -89,7 +85,7 @@ export function renderSolutions(sols, { searchId, totalCount, sort } = {}) {
   lines.push(
     `${sols.length} itinerar${sols.length === 1 ? "y" : "ies"}` +
       (totalCount ? ` (of ${totalCount} found)` : "") +
-      (sort ? `, sorted by ${sort}` : "")
+      (sort ? `, sorted by ${sort}` : ""),
   );
   lines.push("");
 
@@ -97,7 +93,7 @@ export function renderSolutions(sols, { searchId, totalCount, sort } = {}) {
     const stops = s.slices.reduce((n, x) => n + x.stops, 0);
     lines.push(
       `#${i + 1}  ${s.priceDisplay}  ·  ${hm(s.totalDurationMinutes)} total  ·  ` +
-        `${stops} stop${stops === 1 ? "" : "s"}  ·  ${s.carriers.join("/")}`
+        `${stops} stop${stops === 1 ? "" : "s"}  ·  ${s.carriers.join("/")}`,
     );
     s.slices.forEach((sl, li) => {
       const label = multi ? `  leg ${li + 1}: ` : "  ";
@@ -105,10 +101,10 @@ export function renderSolutions(sols, { searchId, totalCount, sort } = {}) {
         `${label}${sl.origin}→${sl.destination}  ${day(sl.departure)} ` +
           `${clock(sl.departure)}–${clock(sl.arrival)}${dayOffset(
             sl.departure,
-            sl.arrival
+            sl.arrival,
           )}  ${hm(sl.durationMinutes)}  ` +
           `${sl.flights.join(", ") || "?"}` +
-          (sl.cabins.length ? `  [${sl.cabins.join("/")}]` : "")
+          (sl.cabins.length ? `  [${sl.cabins.join("/")}]` : ""),
       );
     });
     lines.push("");
@@ -117,16 +113,14 @@ export function renderSolutions(sols, { searchId, totalCount, sort } = {}) {
   if (searchId) {
     lines.push(
       `Search ID: ${searchId} — pass this to get_itinerary_details with a rank ` +
-        `(#N above) to see fare classes, booking codes, and aircraft.`
+        `(#N above) to see fare classes, booking codes, and aircraft.`,
     );
   }
   return lines.join("\n");
 }
 
 export function renderDetail(booking, fallback) {
-  const slices = booking?.itinerary?.slices?.length
-    ? booking.itinerary.slices
-    : fallback?.itinerary?.slices || [];
+  const slices = booking?.itinerary?.slices?.length ? booking.itinerary.slices : fallback?.itinerary?.slices || [];
   if (!slices.length) return "No booking detail returned for that itinerary.";
 
   const out = [];
@@ -136,14 +130,11 @@ export function renderDetail(booking, fallback) {
   slices.forEach((sl, i) => {
     // bookingDetails often omits slice-level duration, so derive it from the
     // segments (which includes layovers only if the engine supplied them).
-    const dur =
-      sl.duration ||
-      (sl.segments || []).reduce((a, s) => a + (s.duration || 0), 0) ||
-      null;
+    const dur = sl.duration || (sl.segments || []).reduce((a, s) => a + (s.duration || 0), 0) || null;
     out.push(
       `Leg ${i + 1}: ${sl.origin?.code}→${sl.destination?.code}  ` +
         `${day(sl.departure)} ${clock(sl.departure)}–${clock(sl.arrival)}` +
-        `${dayOffset(sl.departure, sl.arrival)}  ${hm(dur)}`
+        `${dayOffset(sl.departure, sl.arrival)}  ${hm(dur)}`,
     );
     for (const seg of sl.segments || []) {
       const infos = seg.bookingInfos || [];
@@ -154,12 +145,10 @@ export function renderDetail(booking, fallback) {
           [
             ...infos.map((b) => b.fareBasisCode),
             ...rbd.map((c) => fareByKey.get(`${seg.origin?.code}${seg.destination?.code}${c}`)?.code),
-          ].filter(Boolean)
+          ].filter(Boolean),
         ),
       ];
-      const aircraft = (seg.legs || [])
-        .map((l) => l.aircraft?.shortName)
-        .filter(Boolean);
+      const aircraft = (seg.legs || []).map((l) => l.aircraft?.shortName).filter(Boolean);
       out.push(
         `   ${seg.carrier?.code || "??"}${seg.flight?.number || "?"}  ` +
           `${seg.origin?.code}→${seg.destination?.code}  ` +
@@ -170,7 +159,7 @@ export function renderDetail(booking, fallback) {
           (cabins.length ? `  ${cabins.join("/")}` : "") +
           (rbd.length ? `  RBD ${rbd.join(",")}` : "") +
           (fares.length ? `  fare ${fares.join(",")}` : "") +
-          (aircraft.length ? `  ${[...new Set(aircraft)].join(",")}` : "")
+          (aircraft.length ? `  ${[...new Set(aircraft)].join(",")}` : ""),
       );
     }
     out.push("");

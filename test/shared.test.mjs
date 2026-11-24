@@ -39,9 +39,7 @@ for (const file of shared) {
 
 test("both package.json files pin the same MCP server SDK", () => {
   const dep = (rel) =>
-    JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8")).dependencies[
-      "@modelcontextprotocol/server"
-    ];
+    JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8")).dependencies["@modelcontextprotocol/server"];
   assert.equal(dep("../package.json"), dep("../cloudflare/package.json"));
 });
 

@@ -21,9 +21,7 @@ import { SearchStore } from "./store.js";
 const KEY_TTL_MS = 30 * 24 * 3600 * 1000;
 
 function cacheFile() {
-  const base =
-    process.env.ITA_MATRIX_CACHE_DIR ||
-    path.join(homedir(), ".cache", "ita-matrix-mcp");
+  const base = process.env.ITA_MATRIX_CACHE_DIR || path.join(homedir(), ".cache", "ita-matrix-mcp");
   return path.join(base, "api-key.json");
 }
 

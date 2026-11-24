@@ -54,8 +54,6 @@ export function createWorkerServer(env = {}, origin = "") {
       apiKey: env.ITA_MATRIX_API_KEY ?? null,
     }),
     store: new SearchStore(kv),
-    icons: origin
-      ? [{ src: `${origin}/icon.png`, mimeType: "image/png", sizes: ["512x512"] }]
-      : undefined,
+    icons: origin ? [{ src: `${origin}/icon.png`, mimeType: "image/png", sizes: ["512x512"] }] : undefined,
   });
 }
