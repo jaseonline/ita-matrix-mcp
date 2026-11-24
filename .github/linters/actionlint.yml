@@ -2,4 +2,4 @@
 # GitHub-hosted runner labels that the actionlint bundled with super-linter does not know yet.
 self-hosted-runner:
   labels:
-    - ubuntu-26.04
+    - ubuntu-24.04

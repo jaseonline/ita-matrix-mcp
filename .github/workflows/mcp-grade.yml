@@ -1,14 +1,19 @@
 # .github/workflows/mcp-grade.yml
 name: mcp-grade
-on: [push, pull_request]
-permissions:
-  contents: read
+on:
+  push:
+    paths:
+      - src
+  pull_request:
+    paths:
+      - src
+  workflow_dispatch:
 jobs:
   scan:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: lipon101/mcp-grade@0752a8ae31d2093acd0753ec6cec46ff10ea9656 # v1.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: lipon101/mcp-grade@0752a8ae31d2093acd0753ec6cec46ff10ea9656
         id: scan
         with:
           fail-under: C

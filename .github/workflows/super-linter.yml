@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   run-lint:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -29,5 +29,5 @@ jobs:
           DEFAULT_BRANCH: "main"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_GITHUB_ACTIONS: true
-          # Declares runner labels newer than the bundled actionlint knows (ubuntu-26.04)
+          # Declares runner labels newer than the bundled actionlint knows (ubuntu-24.04)
           GITHUB_ACTIONS_CONFIG_FILE: actionlint.yml
