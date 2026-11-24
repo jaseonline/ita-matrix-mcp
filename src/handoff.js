@@ -23,7 +23,6 @@
 const CABIN_RANK = { COACH: 0, "PREMIUM-COACH": 1, "PREMIUM-ECONOMY": 1, BUSINESS: 2, FIRST: 3 };
 const cabinRank = (c) => CABIN_RANK[String(c || "").toUpperCase()] ?? 0;
 
-const pad2 = (n) => String(n).padStart(2, "0");
 
 /** "2027-06-11T14:20" -> parts. Matrix returns local times with no offset. */
 function parts(iso) {

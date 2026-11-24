@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test \"test/*.test.mjs\" && node test/smoke.mjs",
-    "test:live": "ITA_MATRIX_LIVE=1 node --test test/"
+    "test:live": "ITA_MATRIX_LIVE=1 node --test test/",
+    "lint": "biome lint"
   },
   "engines": {
     "node": ">=20"
@@ -23,6 +24,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.9",
     "@modelcontextprotocol/client": "2.4.0"
   }
 }
