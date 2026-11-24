@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r \".tool_input.file_path // empty\"); case \"$f\" in *.env|*.dev.vars|*package-lock.json) echo \"Blocked: $f is protected (secrets or npm-managed lock file). Edit it by hand or via npm.\" >&2; exit 2;; esac",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r \".tool_input.file_path // empty\"); case \"$f\" in *'\\src\\'*.js|*/src/*.js) cd \"$CLAUDE_PROJECT_DIR\" && { out=$(npm test --silent 2>&1) || { printf \"%s\\n\" \"$out\" | tail -40 >&2; exit 2; }; };; esac",
+            "timeout": 120,
+            "statusMessage": "Running offline tests..."
+          }
+        ]
+      }
+    ]
+  }
+}
