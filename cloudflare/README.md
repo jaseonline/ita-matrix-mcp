@@ -21,12 +21,15 @@ the SDK and zod to `cloudflare/node_modules`.
 cd D:\Projects\active\ita-matrix-mcp\cloudflare
 npm install
 npx wrangler login            # once
-npx wrangler deploy           # creates the KV namespace; answers 503 until the secret is set
+npx wrangler deploy           # answers 503 until the secret is set
 
 # Generate a long random path and store it as a secret (paste it when prompted):
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 npx wrangler secret put ITA_MATRIX_SECRET_PATH
 ```
+
+`wrangler.jsonc` pins `ITA_KV` to an existing KV namespace `id`, so deploys reuse its cached API key and searches. In a
+fork, remove that `id` and `wrangler deploy` will create a namespace in your account.
 
 Your connector URL is then
 `https://ita-matrix-mcp.<your-workers-subdomain>.workers.dev/mcp/<secret>`.

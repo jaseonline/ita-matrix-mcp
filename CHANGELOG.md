@@ -15,7 +15,6 @@ All notable changes to this project are recorded here. The format follows
 - `CONTRIBUTING.md` and this changelog.
 - MCP prompts (`plan_trip`, `hunt_premium_fare`, `explain_empty_search`) and resources (`ita://reference/routing`,
   `ita://guides/fare-strategy`) on both the Node server and the Cloudflare Worker.
-- `social-banner` workflow that renders the README banner to a 1280x640 PNG for use as the repository social preview.
 - Claude Code setup: `CLAUDE.md`, a `/deploy-worker` skill for production Worker deploys, and project hooks that run
   the offline tests after `src/` edits and block edits to `.env`, `.dev.vars` and `package-lock.json`.
 - Biome linting (`npm run lint`, also run in CI) with the recommended rule set; existing findings fixed (unused
@@ -45,6 +44,9 @@ All notable changes to this project are recorded here. The format follows
 - `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
   agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
   layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
+- The `mcp-grade` workflow now runs on changes under `src/` and `cloudflare/src/`: its `paths: src` filter matched only a
+  file literally named `src`.
+- `cloudflare/README.md` no longer says `wrangler deploy` creates the KV namespace; `wrangler.jsonc` pins an existing one.
 
 ### Security
 
