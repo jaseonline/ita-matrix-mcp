@@ -89,15 +89,22 @@ export class KeyProvider {
   }
 
   async _resolve() {
-    if (this._pinned) return (this._key = this._pinned);
+    if (this._pinned) {
+      this._key = this._pinned;
+      return this._key;
+    }
 
     const cached = await this._cache?.read();
-    if (cached) return (this._key = cached);
+    if (cached) {
+      this._key = cached;
+      return this._key;
+    }
 
     for (const k of SEEDS) {
       if (await this._ok(k)) {
         await this._cache?.write(k);
-        return (this._key = k);
+        this._key = k;
+        return k;
       }
     }
 
@@ -106,7 +113,8 @@ export class KeyProvider {
       if (SEEDS.includes(k)) continue;
       if (await this._ok(k)) {
         await this._cache?.write(k);
-        return (this._key = k);
+        this._key = k;
+        return k;
       }
     }
 
