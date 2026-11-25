@@ -24,7 +24,7 @@ Please do **not** open public issues for security problems. Report privately ins
 - Steps to reproduce
 - Potential impact
 - Proof of concept (if available)
-- The commit, and how the server was deployed (stdio, Docker, Cloudflare Workers)
+- The commit, and how the server was deployed (stdio, HTTP, Cloudflare Workers)
 
 ### What to expect
 

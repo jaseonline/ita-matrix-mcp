@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Streamable HTTP entrypoint, for running behind Coolify (or any TLS proxy)
+ * Streamable HTTP entrypoint, for running behind any TLS-terminating proxy
  * so Claude Desktop can reach it as a custom connector.
  *
  * Claude connects from Anthropic's cloud, not from the user's machine, so this
- * must be published on a public HTTPS URL. Coolify's proxy terminates TLS; this
+ * must be published on a public HTTPS URL. The proxy terminates TLS; this
  * process only ever speaks plain HTTP on PORT.
  *
  * Auth: Claude Desktop's connector UI has no field for custom headers, so a
@@ -31,8 +31,8 @@ const HOST = process.env.HOST || "0.0.0.0";
 const SECRET = trimSlashes(process.env.ITA_MATRIX_SECRET_PATH);
 const MCP_PATH = SECRET ? `/mcp/${SECRET}` : "/mcp";
 
-// Hosts allowed in the Host header, guarding against DNS-rebinding. Coolify
-// sets the public domain; list it here (comma-separated) to enable the check.
+// Hosts allowed in the Host header, guarding against DNS-rebinding. List the
+// public domain here (comma-separated) to enable the check.
 const ALLOWED_HOSTS = (process.env.ITA_MATRIX_ALLOWED_HOSTS || "")
   .split(",")
   .map((h) => h.trim().toLowerCase())
@@ -87,7 +87,7 @@ async function readBody(req, limitBytes = 4 * 1024 * 1024) {
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
 
-  // Liveness probe for Coolify. Deliberately reveals nothing about the path.
+  // Liveness probe. Deliberately reveals nothing about the path.
   if (url.pathname === "/health") {
     return send(res, 200, { status: "ok", sessions: sessions.size });
   }

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `test/shared.test.mjs` (the `NODE_ONLY` list) enforces this, but only for top-level `src/*.js`. It misses dynamic `import("node:…")` and doesn't check `src/offline/`.
 - `@modelcontextprotocol/server` must be the same exact version in `package.json` and `cloudflare/package.json`, and a test checks it. `wrangler.jsonc` aliases the SDK and zod to `cloudflare/node_modules`, so only one copy is bundled.
 - In stdio mode, stdout is the MCP channel. Log to stderr only.
-- Production is the Worker only. The Node and Docker server, including the files under `deploy/`, is for local dev and stdio. Deploy with `/deploy-worker`.
+- Production is the Worker only. The Node server is for local dev and stdio. Deploy with `/deploy-worker`.
 
 ## Secret path
 - MCP is served at `/mcp/<ITA_MATRIX_SECRET_PATH>`, and the URL is the credential.
