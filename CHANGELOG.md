@@ -38,6 +38,12 @@ All notable changes to this project are recorded here. The format follows
 
 - The Claude workflows (`claude_auto_review`, `claude_maintenance`) no longer fail at start-up: they stopped installing
   the `feature-dev@claude-plugins-official` plugin, which can no longer be installed.
+- `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
+  agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
+  layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
+- The `mcp-grade` workflow now runs on changes under `src/` and `cloudflare/src/`: its `paths: src` filter matched only a
+  file literally named `src`.
+- `cloudflare/README.md` no longer says `wrangler deploy` creates the KV namespace; `wrangler.jsonc` pins an existing one.
 
 ### Removed
 
@@ -45,12 +51,6 @@ All notable changes to this project are recorded here. The format follows
   prompt came from a plugin that is no longer in the marketplace.
 - The Coolify/NAS deployment: `deploy/NAS-PROMPT.md`, `Dockerfile`, `docker-compose.yaml` and `.dockerignore`, plus
   Coolify references in `src/http-server.js`. Production is the Cloudflare Worker only.
-- `get_itinerary_details` now gives each segment line its departure date and a day marker on the arrival time, and the
-  agent brief marks arrival days too. Previously only the leg header showed `+N`, so dates after an overnight flight or
-  layover had to be guessed. Arrivals on the previous calendar day now show `-1`.
-- The `mcp-grade` workflow now runs on changes under `src/` and `cloudflare/src/`: its `paths: src` filter matched only a
-  file literally named `src`.
-- `cloudflare/README.md` no longer says `wrangler deploy` creates the KV namespace; `wrangler.jsonc` pins an existing one.
 
 ### Security
 
